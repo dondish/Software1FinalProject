@@ -1,4 +1,4 @@
-add_library(sudoku dummy.c)
+add_library(sudoku board.c)
 target_include_directories(sudoku PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(sudoku-console main.c)
