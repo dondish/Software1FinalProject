@@ -4,3 +4,5 @@ function(test_module NAME)
     target_link_libraries(${TEST_NAME} sudoku)
     add_test(NAME ${NAME} COMMAND ${TEST_NAME})
 endfunction()
+
+test_module(board)
