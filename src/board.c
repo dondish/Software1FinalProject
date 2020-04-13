@@ -26,7 +26,8 @@ int board_block_size(const board_t* board) { return board->m * board->n; }
 cell_t* board_access(board_t* board, int row, int col) {
     return &board->cells[row * board_block_size(board) + col];
 }
-const cell_t* board_access_const(const board_t* board, int row, int col){
+
+const cell_t* board_access_const(const board_t* board, int row, int col) {
     return board_access((board_t*)board, row, col);
 }
 
@@ -36,6 +37,7 @@ cell_t* board_access_block(board_t* board, int row, int col, int blockrow,
         blockrow * board_block_size(board) * board->m + blockcol * board->n;
     return &board->cells[block_start + row * board_block_size(board) + col];
 }
+
 const cell_t* board_access_block_const(const board_t* board, int row, int col,
                                        int blockrow, int blockcol) {
     return board_access_block((board_t*)board, row, col, blockrow, blockcol);
