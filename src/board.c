@@ -1,5 +1,6 @@
 #include "board.h"
 
+#include "bool.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -117,4 +118,51 @@ void board_serialize(const board_t* board, FILE* stream) {
         }
         fputc('\n', stream);
     }
+}
+
+bool_t board_deserialize(board_t* board, FILE* stream) {
+    int m, n;
+    int block_size;
+
+    int row;
+    int col;
+
+    if (fscanf(stream, "%d %d", &m, &n) < 2) {
+        return FALSE;
+    }
+
+    block_size = m * n;
+
+    if (!board_init(board, m, n)) {
+        return FALSE;
+    }
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            int value;
+            int next_char;
+
+            cell_t* cell = board_access(board, row, col);
+
+            if (fscanf(stream, " %d", &value) < 1) {
+                return FALSE;
+            }
+
+            if (value < 0 || value > block_size) {
+                return FALSE;
+            }
+
+            cell->value = value;
+
+            next_char = fgetc(stream);
+
+            if (next_char == '.') {
+                cell->flags = CELL_FLAGS_FIXED;
+            } else {
+                ungetc(next_char, stream);
+            }
+        }
+    }
+
+    return TRUE;
 }
