@@ -51,7 +51,7 @@ const cell_t* board_access_block_const(const board_t* board, int row, int col,
     return board_access_block((board_t*)board, row, col, blockrow, blockcol);
 }
 
-static void print_separator_line(int n, int m, FILE* stream) {
+static void print_separator_line(int m, int n, FILE* stream) {
     int line_len = 4 * n * m + m + 1;
     int i;
     for (i = 0; i < line_len; i++) {
@@ -60,32 +60,38 @@ static void print_separator_line(int n, int m, FILE* stream) {
     fputc('\n', stream);
 }
 
-void board_print(const board_t* board, FILE* stream) {
-    int bi, bj, i, j;
-    for (bi = 0; bi < board->n; bi++) {
-        print_separator_line(board->n, board->m, stream);
-        for (i = 0; i < board->m; i++) {
-            fprintf(stream, "|");
-            for (bj = 0; bj < board->m; bj++) {
-                for (j = 0; j < board->n; j++) {
-                    const cell_t* cell =
-                        board_access_block_const(board, i, j, bi, bj);
-                    fputc(' ', stream);
-                    if (cell->value > 0) {
-                        fprintf(stream, "%2d%c", cell->value,
-                                cell->flags == CELL_FLAGS_FIXED
-                                    ? '.'
-                                    : (cell->flags == CELL_FLAGS_ERROR ? '*'
-                                                                       : ' '));
-                    } else {
-                        fprintf(stream, "   ");
-                    }
-                }
-                fprintf(stream, "|");
-            }
-        }
+static void print_cell(const cell_t* cell, FILE* stream) {
+    fputc(' ', stream);
+    if (cell_is_empty(cell)) {
+        fprintf(stream, "   ");
+    } else {
+        char decorator =
+            cell_is_fixed(cell) ? '.' : cell_is_error(cell) ? '*' : ' ';
+        fprintf(stream, "%2d%c", cell->value, decorator);
     }
-    print_separator_line(board->n, board->m, stream);
+}
+
+void board_print(const board_t* board, FILE* stream) {
+    int block_size = board_block_size(board);
+    int row;
+    int col;
+
+    for (row = 0; row < block_size; row++) {
+        if (row % board->m == 0) {
+            print_separator_line(board->m, board->n, stream);
+        }
+
+        for (col = 0; col < block_size; col++) {
+            if (col % board->n == 0) {
+                fputc('|', stream);
+            }
+            print_cell(board_access_const(board, row, col), stream);
+        }
+
+        fputs("|\n", stream);
+    }
+
+    print_separator_line(board->m, board->n, stream);
 }
 
 void board_serialize(const board_t* board, FILE* stream) {
