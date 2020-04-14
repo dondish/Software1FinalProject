@@ -4,6 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+bool_t cell_is_empty(const cell_t* cell) { return cell->value == 0; }
+bool_t cell_is_fixed(const cell_t* cell) {
+    return cell->flags == CELL_FLAGS_FIXED;
+}
+bool_t cell_is_error(const cell_t* cell) {
+    return cell->flags == CELL_FLAGS_ERROR;
+}
+
 bool_t board_init(board_t* board, int m, int n) {
     int block_size = m * n;
     cell_t* cells = calloc(block_size * block_size, sizeof(cell_t));
