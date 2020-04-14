@@ -11,6 +11,13 @@ typedef enum cell_flags {
     CELL_FLAGS_ERROR
 } cell_flags_t;
 
+typedef enum deserialize_status {
+    DS_OK,
+    DS_ERR_IO,
+    DS_ERR_FMT,
+    DS_ERR_CELL_VAL
+} deserialize_status_t;
+
 typedef struct cell {
     int value;
     cell_flags_t flags;
@@ -42,6 +49,6 @@ const cell_t* board_access_block_const(const board_t* board, int row, int col,
 void board_print(const board_t* board, FILE* stream);
 
 void board_serialize(const board_t* board, FILE* stream);
-bool_t board_deserialize(board_t* board, FILE* stream);
+deserialize_status_t board_deserialize(board_t* board, FILE* stream);
 
 #endif

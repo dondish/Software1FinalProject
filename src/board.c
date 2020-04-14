@@ -120,7 +120,37 @@ void board_serialize(const board_t* board, FILE* stream) {
     }
 }
 
-bool_t board_deserialize(board_t* board, FILE* stream) {
+static deserialize_status_t handle_scanf_err(FILE* stream) {
+    return ferror(stream) ? DS_ERR_IO : DS_ERR_FMT;
+}
+
+static deserialize_status_t deserialize_cell(cell_t* cell, int block_size,
+                                             FILE* stream) {
+    int value;
+    int next_char;
+
+    if (fscanf(stream, " %d", &value) < 1) {
+        return handle_scanf_err(stream);
+    }
+
+    if (value < 0 || value > block_size) {
+        return DS_ERR_CELL_VAL;
+    }
+
+    cell->value = value;
+
+    next_char = fgetc(stream);
+
+    if (next_char == '.') {
+        cell->flags = CELL_FLAGS_FIXED;
+    } else {
+        ungetc(next_char, stream);
+    }
+
+    return DS_OK;
+}
+
+deserialize_status_t board_deserialize(board_t* board, FILE* stream) {
     int m, n;
     int block_size;
 
@@ -128,41 +158,27 @@ bool_t board_deserialize(board_t* board, FILE* stream) {
     int col;
 
     if (fscanf(stream, "%d %d", &m, &n) < 2) {
-        return FALSE;
+        return handle_scanf_err(stream);
     }
 
     block_size = m * n;
 
     if (!board_init(board, m, n)) {
-        return FALSE;
+        return DS_ERR_IO; /* TODO: just terminate on allocation failures */
     }
 
     for (row = 0; row < block_size; row++) {
         for (col = 0; col < block_size; col++) {
-            int value;
-            int next_char;
-
             cell_t* cell = board_access(board, row, col);
+            deserialize_status_t cell_status =
+                deserialize_cell(cell, block_size, stream);
 
-            if (fscanf(stream, " %d", &value) < 1) {
-                return FALSE;
-            }
-
-            if (value < 0 || value > block_size) {
-                return FALSE;
-            }
-
-            cell->value = value;
-
-            next_char = fgetc(stream);
-
-            if (next_char == '.') {
-                cell->flags = CELL_FLAGS_FIXED;
-            } else {
-                ungetc(next_char, stream);
+            if (cell_status != DS_OK) {
+                board_destroy(board);
+                return cell_status;
             }
         }
     }
 
-    return TRUE;
+    return DS_OK;
 }

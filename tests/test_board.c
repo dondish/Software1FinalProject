@@ -119,7 +119,10 @@ static void test_board_deserialize() {
     fputs(contents, stream);
     rewind(stream);
 
-    assert(board_deserialize(&board, stream));
+    assert(board_deserialize(&board, stream) == DS_OK);
+
+    assert(board.m == 3);
+    assert(board.n == 2);
 
     for (row = 0; row < 6; row++) {
         for (col = 0; col < 6; col++) {
@@ -128,7 +131,7 @@ static void test_board_deserialize() {
             assert(cell->value == (row + col) % 6 + 1);
 
             if ((row == 2 && col == 4) || (row == 3 && col == 3)) {
-                assert(cell->flags == CELL_FLAGS_FIXED);
+                assert(cell_is_fixed(cell));
             } else {
                 assert(cell->flags == CELL_FLAGS_NONE);
             }
