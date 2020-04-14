@@ -94,6 +94,13 @@ void board_print(const board_t* board, FILE* stream) {
     print_separator_line(board->m, board->n, stream);
 }
 
+static void serialize_cell(const cell_t* cell, FILE* stream) {
+    fprintf(stream, "%d", cell->value);
+    if (cell_is_fixed(cell)) {
+        fputc('.', stream);
+    }
+}
+
 void board_serialize(const board_t* board, FILE* stream) {
     int block_size = board_block_size(board);
     int row;
@@ -103,12 +110,11 @@ void board_serialize(const board_t* board, FILE* stream) {
 
     for (row = 0; row < block_size; row++) {
         for (col = 0; col < block_size; col++) {
-            const cell_t* cell = board_access_const(board, row, col);
             if (col > 0) {
                 fputc(' ', stream);
             }
-            fprintf(stream, "%d", cell->value);
+            serialize_cell(board_access_const(board, row, col), stream);
         }
-        fputs("", stream);
+        fputc('\n', stream);
     }
 }
