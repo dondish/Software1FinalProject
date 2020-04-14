@@ -101,9 +101,45 @@ static void test_board_serialize() {
     assert(!strcmp(buf, expected));
 }
 
+static void test_board_deserialize() {
+    board_t board;
+    int row;
+    int col;
+
+    FILE* stream;
+    const char* contents = "3 2\n"
+                           "1 2 3 4 5 6\n"
+                           "2 3 4   5 6 1\n"
+                           "3 4 5 6 1. 2\n"
+                           "4 5\t6 1. 2 3\n"
+                           "5 6 1 2 3 4"
+                           "  6 1 2 3 4 5\n";
+
+    stream = tmpfile();
+    fputs(contents, stream);
+    rewind(stream);
+
+    assert(board_deserialize(&board, stream));
+
+    for (row = 0; row < 6; row++) {
+        for (col = 0; col < 6; col++) {
+            const cell_t* cell = board_access_const(&board, row, col);
+
+            assert(cell->value == (row + col) % 6 + 1);
+
+            if ((row == 2 && col == 4) || (row == 3 && col == 3)) {
+                assert(cell->flags == CELL_FLAGS_FIXED);
+            } else {
+                assert(cell->flags == CELL_FLAGS_NONE);
+            }
+        }
+    }
+}
+
 int main() {
     test_board_access();
     test_board_print();
     test_board_serialize();
+    test_board_deserialize();
     return 0;
 }
