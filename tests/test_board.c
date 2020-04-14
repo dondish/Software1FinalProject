@@ -15,28 +15,45 @@ static void test_board_access() {
     assert(board.cells[13].value == 17);
 }
 
-static void test_board_print_empty() {
+static void test_board_print() {
     board_t board;
+    cell_t* cell;
+
     FILE* stream;
     char buf[1024] = {0};
     const char* expected = "-------------------------------------------\n"
-                           "|                    |                    |\n"
-                           "|                    |                    |\n"
+                           "|              5.    |                    |\n"
+                           "|                  5*|                    |\n"
+                           "-------------------------------------------\n"
+                           "|                    |      6             |\n"
+                           "|                    |  7   8             |\n"
                            "-------------------------------------------\n"
                            "|                    |                    |\n"
                            "|                    |                    |\n"
                            "-------------------------------------------\n"
                            "|                    |                    |\n"
-                           "|                    |                    |\n"
-                           "-------------------------------------------\n"
-                           "|                    |                    |\n"
-                           "|                    |                    |\n"
+                           "|          3         |                    |\n"
                            "-------------------------------------------\n"
                            "|                    |                    |\n"
                            "|                    |                    |\n"
                            "-------------------------------------------\n";
 
     assert(board_init(&board, 2, 5));
+    cell = board_access(&board, 0, 3);
+    cell->value = 5;
+    cell->flags = CELL_FLAGS_FIXED;
+    cell = board_access(&board, 1, 4);
+    cell->value = 5;
+    cell->flags = CELL_FLAGS_ERROR;
+    cell = board_access(&board, 2, 6);
+    cell->value = 6;
+    cell = board_access(&board, 3, 5);
+    cell->value = 7;
+    cell = board_access(&board, 3, 6);
+    cell->value = 8;
+    cell = board_access(&board, 7, 2);
+    cell->value = 3;
+
     stream = tmpfile();
     assert(stream);
 
@@ -50,6 +67,6 @@ static void test_board_print_empty() {
 
 int main() {
     test_board_access();
-    test_board_print_empty();
+    test_board_print();
     return 0;
 }
