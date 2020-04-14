@@ -65,8 +65,45 @@ static void test_board_print() {
     assert(!strcmp(buf, expected));
 }
 
+static void test_board_serialize() {
+    board_t board;
+    int row;
+    int col;
+
+    FILE* stream;
+    char buf[256] = {0};
+    const char* expected = "3 2\n"
+                           "1 2 3 4 5 6\n"
+                           "2 3 4 5 6 1\n"
+                           "3 4 5 6 1. 2\n"
+                           "4 5 6 1. 2 3\n"
+                           "5 6 1 2 3 4\n"
+                           "6 1 2 3 4 5\n";
+
+    assert(board_init(&board, 3, 2));
+
+    for (row = 0; row < 6; row++) {
+        for (col = 0; col < 6; col++) {
+            board_access(&board, row, col)->value = (row + col) % 6 + 1;
+        }
+    }
+
+    board_access(&board, 2, 4)->flags = CELL_FLAGS_FIXED;
+    board_access(&board, 3, 3)->flags = CELL_FLAGS_FIXED;
+
+    stream = tmpfile();
+
+    board_serialize(&board, stream);
+    rewind(stream);
+    fread(buf, 1, sizeof(buf), stream);
+    fputs(buf, stderr);
+
+    assert(!strcmp(buf, expected));
+}
+
 int main() {
     test_board_access();
     test_board_print();
+    test_board_serialize();
     return 0;
 }
