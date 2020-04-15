@@ -41,10 +41,12 @@ int board_block_size(const board_t* board);
 cell_t* board_access(board_t* board, int row, int col);
 const cell_t* board_access_const(const board_t* board, int row, int col);
 
-cell_t* board_access_block(board_t* board, int row, int col, int blockrow,
-                           int blockcol);
-const cell_t* board_access_block_const(const board_t* board, int row, int col,
-                                       int blockrow, int blockcol);
+cell_t* board_access_block(board_t* board, int block_row, int block_col,
+                           int local_row, int local_col);
+
+const cell_t* board_access_block_const(const board_t* board, int block_row,
+                                       int block_col, int local_row,
+                                       int local_col);
 
 void board_print(const board_t* board, FILE* stream);
 

@@ -40,16 +40,17 @@ const cell_t* board_access_const(const board_t* board, int row, int col) {
     return board_access((board_t*)board, row, col);
 }
 
-cell_t* board_access_block(board_t* board, int row, int col, int blockrow,
-                           int blockcol) {
-    int block_start =
-        blockrow * board_block_size(board) * board->m + blockcol * board->n;
-    return &board->cells[block_start + row * board_block_size(board) + col];
+cell_t* board_access_block(board_t* board, int block_row, int block_col,
+                           int local_row, int local_col) {
+    return board_access(board, block_row * board->m + local_row,
+                        block_col * board->n + local_col);
 }
 
-const cell_t* board_access_block_const(const board_t* board, int row, int col,
-                                       int blockrow, int blockcol) {
-    return board_access_block((board_t*)board, row, col, blockrow, blockcol);
+const cell_t* board_access_block_const(const board_t* board, int block_row,
+                                       int block_col, int local_row,
+                                       int local_col) {
+    return board_access_block((board_t*)board, block_row, block_col, local_row,
+                              local_col);
 }
 
 static void print_separator_line(int m, int n, FILE* stream) {

@@ -14,6 +14,12 @@ static void test_board_access() {
     assert(board.cells[13].value == 0);
     board_access(&board, 1, 3)->value = 17;
     assert(board.cells[13].value == 17);
+
+    board.cells[27].value = 23;
+    assert(board_access_block(&board, 1, 1, 0, 2)->value == 23);
+
+    board.cells[73].value = 33;
+    assert(board_access_block(&board, 3, 0, 1, 3)->value == 33);
 }
 
 static void test_board_print() {
