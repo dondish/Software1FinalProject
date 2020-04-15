@@ -23,12 +23,21 @@ static void test_board_access() {
     assert(board_access_block(&board, 3, 0, 1, 3)->value == 33);
 }
 
+static void check_contents(FILE* stream, const char* expected) {
+    char buf[1024] = {0};
+
+    rewind(stream);
+    fread(buf, 1, sizeof(buf), stream);
+    fclose(stream);
+    fputs(buf, stderr);
+    assert(!strcmp(buf, expected));
+}
+
 static void test_board_print() {
     board_t board;
     cell_t* cell;
 
     FILE* stream;
-    char buf[1024] = {0};
     const char* expected = "-------------------------------------------\n"
                            "|              5.    |                    |\n"
                            "|                  5*|                    |\n"
@@ -63,14 +72,8 @@ static void test_board_print() {
     cell->value = 3;
 
     stream = tmpfile();
-    assert(stream);
-
     board_print(&board, stream, TRUE);
-    rewind(stream);
-    fread(buf, 1, sizeof(buf), stream);
-    fputs(buf, stderr);
-
-    assert(!strcmp(buf, expected));
+    check_contents(stream, expected);
 }
 
 static void test_board_serialize() {
@@ -79,7 +82,6 @@ static void test_board_serialize() {
     int col;
 
     FILE* stream;
-    char buf[256] = {0};
     const char* expected = "3 2\n"
                            "1 2 3 4 5 6\n"
                            "2 3 4 5 6 1\n"
@@ -102,11 +104,7 @@ static void test_board_serialize() {
     stream = tmpfile();
 
     board_serialize(&board, stream);
-    rewind(stream);
-    fread(buf, 1, sizeof(buf), stream);
-    fputs(buf, stderr);
-
-    assert(!strcmp(buf, expected));
+    check_contents(stream, expected);
 }
 
 static FILE* fill_stream(const char* contents) {
@@ -131,7 +129,10 @@ static void test_board_deserialize() {
 
     FILE* stream = fill_stream(contents);
 
-    assert(board_deserialize(&board, stream) == DS_OK);
+    int status = board_deserialize(&board, stream);
+    fclose(stream);
+
+    assert(status == DS_OK);
 
     assert(board.m == 3);
     assert(board.n == 2);
@@ -183,7 +184,9 @@ static void test_board_deserialize_err_fmt() {
     size_t i;
     for (i = 0; i < sizeof(bad_contents) / sizeof(bad_contents[0]); i++) {
         board_t board;
-        int status = board_deserialize(&board, fill_stream(bad_contents[i]));
+        FILE* stream = fill_stream(bad_contents[i]);
+        int status = board_deserialize(&board, stream);
+        fclose(stream);
         assert(status == DS_ERR_FMT);
     }
 }
@@ -226,7 +229,9 @@ static void test_board_deserialize_err_cell_val() {
     size_t i;
     for (i = 0; i < sizeof(bad_contents) / sizeof(bad_contents[0]); i++) {
         board_t board;
-        int status = board_deserialize(&board, fill_stream(bad_contents[i]));
+        FILE* stream = fill_stream(bad_contents[i]);
+        int status = board_deserialize(&board, stream);
+        fclose(stream);
         assert(status == DS_ERR_CELL);
     }
 }
