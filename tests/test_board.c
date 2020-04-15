@@ -1,5 +1,6 @@
 #include "board.h"
 
+#include "bool.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -64,7 +65,7 @@ static void test_board_print() {
     stream = tmpfile();
     assert(stream);
 
-    board_print(&board, stream);
+    board_print(&board, stream, TRUE);
     rewind(stream);
     fread(buf, 1, sizeof(buf), stream);
     fputs(buf, stderr);

@@ -138,18 +138,19 @@ static void print_separator_line(int m, int n, FILE* stream) {
     fputc('\n', stream);
 }
 
-static void print_cell(const cell_t* cell, FILE* stream) {
+static void print_cell(const cell_t* cell, FILE* stream, bool_t mark_errors) {
     fputc(' ', stream);
     if (cell_is_empty(cell)) {
         fprintf(stream, "   ");
     } else {
-        char decorator =
-            cell_is_fixed(cell) ? '.' : cell_is_error(cell) ? '*' : ' ';
+        char decorator = cell_is_fixed(cell)
+                             ? '.'
+                             : mark_errors && cell_is_error(cell) ? '*' : ' ';
         fprintf(stream, "%2d%c", cell->value, decorator);
     }
 }
 
-void board_print(const board_t* board, FILE* stream) {
+void board_print(const board_t* board, FILE* stream, bool_t mark_errors) {
     int block_size = board_block_size(board);
     int row;
     int col;
@@ -163,7 +164,8 @@ void board_print(const board_t* board, FILE* stream) {
             if (col % board->n == 0) {
                 fputc('|', stream);
             }
-            print_cell(board_access_const(board, row, col), stream);
+            print_cell(board_access_const(board, row, col), stream,
+                       mark_errors);
         }
 
         fputs("|\n", stream);
