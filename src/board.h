@@ -48,6 +48,8 @@ const cell_t* board_access_block_const(const board_t* board, int block_row,
                                        int block_col, int local_row,
                                        int local_col);
 
+bool_t board_check_legal(board_t* board);
+
 void board_print(const board_t* board, FILE* stream);
 
 void board_serialize(const board_t* board, FILE* stream);

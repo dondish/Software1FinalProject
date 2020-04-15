@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 bool_t cell_is_empty(const cell_t* cell) { return cell->value == 0; }
 bool_t cell_is_fixed(const cell_t* cell) {
@@ -46,6 +47,86 @@ const cell_t* board_access_block_const(const board_t* board, int block_row,
                                        int local_col) {
     return board_access_block((board_t*)board, block_row, block_col, local_row,
                               local_col);
+}
+
+static void cell_mark_error(cell_t* cell) {
+    if (!cell_is_fixed(cell)) {
+        cell->flags = CELL_FLAGS_ERROR;
+    }
+}
+
+typedef cell_t* (*cell_retriever_t)(board_t* board, int ctx, int local_off);
+
+typedef struct {
+    bool_t occupied;
+    int local_off;
+} val_map_item_t;
+
+static bool_t check_legal(board_t* board, val_map_item_t* map, int ctx,
+                          cell_retriever_t retrieve) {
+    int block_size = board_block_size(board);
+    bool_t ret = TRUE;
+    int local_off;
+
+    memset(map, 0, block_size * sizeof(val_map_item_t));
+
+    for (local_off = 0; local_off < block_size; local_off++) {
+        cell_t* cell = retrieve(board, ctx, local_off);
+
+        if (!cell_is_empty(cell)) {
+            val_map_item_t* item = map + cell->value;
+
+            if (item->occupied) {
+                /* This value exists in another cell: mark both as errors. */
+                cell_mark_error(retrieve(board, ctx, item->local_off));
+                cell_mark_error(cell);
+                ret = FALSE;
+            }
+
+            item->occupied = TRUE;
+            item->local_off = local_off;
+        }
+    }
+
+    return ret;
+}
+
+static cell_t* retrieve_by_row(board_t* board, int ctx, int local_off) {
+    return board_access(board, ctx, local_off);
+}
+
+static cell_t* retrieve_by_col(board_t* board, int ctx, int local_off) {
+    return board_access(board, local_off, ctx);
+}
+
+static cell_t* retrieve_by_block(board_t* board, int ctx, int local_off) {
+    /* Use `ctx` as a block index in row-major order. */
+
+    int block_row = ctx / board->m;
+    int block_col = ctx % board->m;
+
+    int local_row = local_off / board->n;
+    int local_col = local_off % board->n;
+
+    return board_access_block(board, block_row, block_col, local_row,
+                              local_col);
+}
+
+bool_t board_check_legal(board_t* board) {
+    int block_size = board_block_size(board);
+    val_map_item_t* map = checked_calloc(block_size, sizeof(val_map_item_t));
+
+    bool_t ret = TRUE;
+
+    int i;
+    for (i = 0; i < block_size; i++) {
+        ret &= check_legal(board, map, i, retrieve_by_row);
+        ret &= check_legal(board, map, i, retrieve_by_col);
+        ret &= check_legal(board, map, i, retrieve_by_block);
+    }
+
+    free(map);
+    return ret;
 }
 
 static void print_separator_line(int m, int n, FILE* stream) {
