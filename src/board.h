@@ -33,7 +33,7 @@ bool_t cell_is_empty(const cell_t* cell);
 bool_t cell_is_fixed(const cell_t* cell);
 bool_t cell_is_error(const cell_t* cell);
 
-bool_t board_init(board_t* board, int m, int n);
+void board_init(board_t* board, int m, int n);
 void board_destroy(board_t* board);
 
 int board_block_size(const board_t* board);

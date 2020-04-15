@@ -1,6 +1,7 @@
 #include "board.h"
 
 #include "bool.h"
+#include "checked_alloc.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,19 +14,13 @@ bool_t cell_is_error(const cell_t* cell) {
     return cell->flags == CELL_FLAGS_ERROR;
 }
 
-bool_t board_init(board_t* board, int m, int n) {
+void board_init(board_t* board, int m, int n) {
     int block_size = m * n;
-    cell_t* cells = calloc(block_size * block_size, sizeof(cell_t));
-
-    if (!cells) {
-        return FALSE;
-    }
+    cell_t* cells = checked_calloc(block_size * block_size, sizeof(cell_t));
 
     board->cells = cells;
     board->m = m;
     board->n = n;
-
-    return TRUE;
 }
 
 void board_destroy(board_t* board) { free(board->cells); }
@@ -172,10 +167,7 @@ deserialize_status_t board_deserialize(board_t* board, FILE* stream) {
     }
 
     block_size = m * n;
-
-    if (!board_init(board, m, n)) {
-        return DS_ERR_IO; /* TODO: just terminate on allocation failures */
-    }
+    board_init(board, m, n);
 
     for (row = 0; row < block_size; row++) {
         for (col = 0; col < block_size; col++) {

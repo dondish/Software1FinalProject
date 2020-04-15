@@ -8,7 +8,7 @@
 static void test_board_access() {
     board_t board;
 
-    assert(board_init(&board, 2, 5));
+    board_init(&board, 2, 5);
     assert(board_block_size(&board) == 10);
 
     assert(board.cells[13].value == 0);
@@ -45,7 +45,7 @@ static void test_board_print() {
                            "|                    |                    |\n"
                            "-------------------------------------------\n";
 
-    assert(board_init(&board, 2, 5));
+    board_init(&board, 2, 5);
     cell = board_access(&board, 0, 3);
     cell->value = 5;
     cell->flags = CELL_FLAGS_FIXED;
@@ -87,7 +87,7 @@ static void test_board_serialize() {
                            "5 6 1 2 3 4\n"
                            "6 1 2 3 4 5\n";
 
-    assert(board_init(&board, 3, 2));
+    board_init(&board, 3, 2);
 
     for (row = 0; row < 6; row++) {
         for (col = 0; col < 6; col++) {
