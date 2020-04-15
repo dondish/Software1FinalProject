@@ -134,7 +134,7 @@ static deserialize_status_t deserialize_cell(cell_t* cell, int block_size,
     }
 
     if (value < 0 || value > block_size) {
-        return DS_ERR_CELL_VAL;
+        return DS_ERR_CELL;
     }
 
     cell->value = value;
@@ -142,7 +142,12 @@ static deserialize_status_t deserialize_cell(cell_t* cell, int block_size,
     next_char = fgetc(stream);
 
     if (next_char == '.') {
-        cell->flags = CELL_FLAGS_FIXED;
+        if (!value) {
+            /* fixed empty cell */
+            return DS_ERR_CELL;
+        } else {
+            cell->flags = CELL_FLAGS_FIXED;
+        }
     } else {
         ungetc(next_char, stream);
     }
@@ -159,6 +164,10 @@ deserialize_status_t board_deserialize(board_t* board, FILE* stream) {
 
     if (fscanf(stream, "%d %d", &m, &n) < 2) {
         return handle_scanf_err(stream);
+    }
+
+    if (m <= 0 || n <= 0) {
+        return DS_ERR_FMT;
     }
 
     block_size = m * n;

@@ -1,6 +1,7 @@
 #include "board.h"
 
 #include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -101,12 +102,18 @@ static void test_board_serialize() {
     assert(!strcmp(buf, expected));
 }
 
+static FILE* fill_stream(const char* contents) {
+    FILE* stream = tmpfile();
+    fputs(contents, stream);
+    rewind(stream);
+    return stream;
+}
+
 static void test_board_deserialize() {
     board_t board;
     int row;
     int col;
 
-    FILE* stream;
     const char* contents = "3 2\n"
                            "1 2 3 4 5 6\n"
                            "2 3 4   5 6 1\n"
@@ -115,9 +122,7 @@ static void test_board_deserialize() {
                            "5 6 1 2 3 4"
                            "  6 1 2 3 4 5\n";
 
-    stream = tmpfile();
-    fputs(contents, stream);
-    rewind(stream);
+    FILE* stream = fill_stream(contents);
 
     assert(board_deserialize(&board, stream) == DS_OK);
 
@@ -139,10 +144,92 @@ static void test_board_deserialize() {
     }
 }
 
+static void test_board_deserialize_err_fmt() {
+    const char* bad_contents[] = {
+        "abcd", /* junk */
+
+        "3 2\n" /* space before dot */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 6 1. 2\n"
+        "4 5\t6 1 . 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 3 4 5\n",
+
+        "3 2\n" /* missing values */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 6 1. 2\n"
+        "4 5\t6 1. 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 \n",
+
+        "-3 2\n" /* negative board sizes */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 6 1. 2\n"
+        "4 5\t6 1 . 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 3 4 5\n",
+    };
+
+    size_t i;
+    for (i = 0; i < sizeof(bad_contents) / sizeof(bad_contents[0]); i++) {
+        board_t board;
+        int status = board_deserialize(&board, fill_stream(bad_contents[i]));
+        assert(status == DS_ERR_FMT);
+    }
+}
+
+static void test_board_deserialize_err_cell_val() {
+    const char* bad_contents[] = {
+        "3 2\n" /* negative cell value */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 -6 1. 2\n"
+        "4 5\t6 1. 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 3 4 5\n",
+
+        "3 2\n" /* negative cell value */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 -6 1. 2\n"
+        "4 5\t6 1. 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 3 4 5\n",
+
+        "3 2\n" /* cell value too large */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 10 1. 2\n"
+        "4 5\t6 1. 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 3 4 5\n",
+
+        "3 2\n" /* fixed empty cell */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 6 1. 2\n"
+        "4 5\t6 0. 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 3 4 5\n",
+    };
+
+    size_t i;
+    for (i = 0; i < sizeof(bad_contents) / sizeof(bad_contents[0]); i++) {
+        board_t board;
+        int status = board_deserialize(&board, fill_stream(bad_contents[i]));
+        assert(status == DS_ERR_CELL);
+    }
+}
+
 int main() {
     test_board_access();
     test_board_print();
     test_board_serialize();
     test_board_deserialize();
+    test_board_deserialize_err_fmt();
+    test_board_deserialize_err_cell_val();
     return 0;
 }

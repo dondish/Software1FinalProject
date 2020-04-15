@@ -15,7 +15,7 @@ typedef enum deserialize_status {
     DS_OK,
     DS_ERR_IO,
     DS_ERR_FMT,
-    DS_ERR_CELL_VAL
+    DS_ERR_CELL
 } deserialize_status_t;
 
 typedef struct cell {
