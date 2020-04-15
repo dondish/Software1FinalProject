@@ -74,7 +74,7 @@ static bool_t check_legal(board_t* board, val_map_item_t* map, int ctx,
         cell_t* cell = retrieve(board, ctx, local_off);
 
         if (!cell_is_empty(cell)) {
-            val_map_item_t* item = map + cell->value;
+            val_map_item_t* item = map + (cell->value - 1);
 
             if (item->occupied) {
                 /* This value exists in another cell: mark both as errors. */
