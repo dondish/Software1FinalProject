@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static void test_board_access() {
+static void test_board_access(void) {
     board_t board;
 
     board_init(&board, 2, 5);
@@ -33,7 +33,7 @@ static void check_contents(FILE* stream, const char* expected) {
     assert(!strcmp(buf, expected));
 }
 
-static void test_board_print() {
+static void test_board_print(void) {
     board_t board;
     cell_t* cell;
 
@@ -98,7 +98,7 @@ static void test_board_print() {
     check_contents(stream, expected_unmarked);
 }
 
-static void test_board_serialize() {
+static void test_board_serialize(void) {
     board_t board;
     int row;
     int col;
@@ -136,7 +136,7 @@ static FILE* fill_stream(const char* contents) {
     return stream;
 }
 
-static void test_board_deserialize() {
+static void test_board_deserialize(void) {
     board_t board;
     int row;
     int col;
@@ -174,7 +174,7 @@ static void test_board_deserialize() {
     }
 }
 
-static void test_board_deserialize_err_fmt() {
+static void test_board_deserialize_err_fmt(void) {
     const char* bad_contents[] = {
         "abcd", /* junk */
 
@@ -213,7 +213,7 @@ static void test_board_deserialize_err_fmt() {
     }
 }
 
-static void test_board_deserialize_err_cell_val() {
+static void test_board_deserialize_err_cell_val(void) {
     const char* bad_contents[] = {
         "3 2\n" /* negative cell value */
         "1 2 3 4 5 6\n"
@@ -258,6 +258,79 @@ static void test_board_deserialize_err_cell_val() {
     }
 }
 
+static void test_board_check_legal(void) {
+    const char* orig_board = "3 3\n"
+                             "0 6. 0 0 0 0 0 0 5\n"
+                             "0 0 0 0 0 0 0 0 0\n"
+                             "0 0 0 0 5 0 0 0 2.\n"
+
+                             "0 0 0 0 0 0 0 0 0\n"
+                             "0 0 0 0 0 0 0 4. 0\n"
+                             "0 0 0 0 0 0 0 0 0\n"
+
+                             "0 0 0 0 0 0 5 0 0\n"
+                             "0 0 0 0 0 0 0 0 0\n"
+                             "0 9. 0 0 0 0 0 0 0\n";
+
+    const char* expected1 = "----------------------------------------\n"
+                            "|      6.  6*|            |          5 |\n"
+                            "|            |            |            |\n"
+                            "|            |      5     |          2.|\n"
+                            "----------------------------------------\n"
+                            "|            |            |            |\n"
+                            "|            |            |      4.    |\n"
+                            "|            |            |            |\n"
+                            "----------------------------------------\n"
+                            "|            |            |  5         |\n"
+                            "|            |            |            |\n"
+                            "|      9.    |            |            |\n"
+                            "----------------------------------------\n";
+
+    const char* expected2 = "----------------------------------------\n"
+                            "|      6.  6*|            |          5*|\n"
+                            "|            |            |            |\n"
+                            "|            |      5     |          2.|\n"
+                            "----------------------------------------\n"
+                            "|            |            |            |\n"
+                            "|            |            |      4.    |\n"
+                            "|            |            |            |\n"
+                            "----------------------------------------\n"
+                            "|            |            |  5*        |\n"
+                            "|            |            |            |\n"
+                            "|      9.    |            |          5*|\n"
+                            "----------------------------------------\n";
+
+    int row;
+    int col;
+
+    board_t board;
+    FILE* stream = fill_stream(orig_board);
+    assert(board_deserialize(&board, stream) == DS_OK);
+    fclose(stream);
+
+    assert(board_check_legal(&board));
+
+    for (row = 0; row < 9; row++) {
+        for (col = 0; col < 9; col++) {
+            assert(!cell_is_error(board_access(&board, row, col)));
+        }
+    }
+
+    board_access(&board, 0, 2)->value = 6;
+    assert(!board_check_legal(&board));
+
+    stream = tmpfile();
+    board_print(&board, stream, TRUE);
+    check_contents(stream, expected1);
+
+    board_access(&board, 8, 8)->value = 5;
+    assert(!board_check_legal(&board));
+
+    stream = tmpfile();
+    board_print(&board, stream, TRUE);
+    check_contents(stream, expected2);
+}
+
 int main() {
     test_board_access();
     test_board_print();
@@ -265,5 +338,6 @@ int main() {
     test_board_deserialize();
     test_board_deserialize_err_fmt();
     test_board_deserialize_err_cell_val();
+    test_board_check_legal();
     return 0;
 }
