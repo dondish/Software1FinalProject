@@ -45,19 +45,41 @@ const cell_t* board_access_block_const(const board_t* board, int block_row,
                               local_col);
 }
 
+/* LEGALITY CHECKING */
+
+/**
+ * Abstraction for a function that can retrieve a cell based on two indices (a
+ * "context" and a "local offset", both in the range `[0, block_size)`), used in
+ * the generalized legality algorithm to abstract row, column and block checks.
+ */
+typedef cell_t* (*cell_retriever_t)(board_t* board, int ctx, int local_off);
+
+/**
+ * Value map item, used to track the last cell on the board in which a given
+ * value was encountered. The value map itself is an array of these, indexed by
+ * cell value.
+ */
+typedef struct {
+    bool_t occupied;
+    int local_off;
+} val_map_item_t;
+
+/**
+ * Mark `cell` as an error if it is not fixed.
+ */
 static void cell_mark_error(cell_t* cell) {
     if (!cell_is_fixed(cell)) {
         cell->flags = CF_ERROR;
     }
 }
 
-typedef cell_t* (*cell_retriever_t)(board_t* board, int ctx, int local_off);
-
-typedef struct {
-    bool_t occupied;
-    int local_off;
-} val_map_item_t;
-
+/**
+ * Check that each of the non-empty cells retrieved by `retriever` has a
+ * distinct value, marking any non-fixed conflicting cells as errors. `ctx` is
+ * held constant, while `local_off` is iterated across `[0, block_size)`. `map`
+ * is used as scratch storage during the check, and must contain at least
+ * `block_size` items.
+ */
 static bool_t check_legal(board_t* board, val_map_item_t* map, int ctx,
                           cell_retriever_t retrieve) {
     int block_size = board_block_size(board);
@@ -87,17 +109,27 @@ static bool_t check_legal(board_t* board, val_map_item_t* map, int ctx,
     return ret;
 }
 
+/**
+ * Retriever for checking legality in a row - use `local_off` to index into the
+ * row designated by `ctx`.
+ */
 static cell_t* retrieve_by_row(board_t* board, int ctx, int local_off) {
     return board_access(board, ctx, local_off);
 }
 
+/**
+ * Retriever for checking legality in a column - use `local_off` to index into
+ * the column designated by `ctx`.
+ */
 static cell_t* retrieve_by_col(board_t* board, int ctx, int local_off) {
     return board_access(board, local_off, ctx);
 }
 
+/**
+ * Retriever for checking legality in a block - use `local_off` to index into
+ * the block designated by `ctx` (in row-major order).
+ */
 static cell_t* retrieve_by_block(board_t* board, int ctx, int local_off) {
-    /* Use `ctx` as a block index in row-major order. */
-
     int block_row = ctx / board->m;
     int block_col = ctx % board->m;
 
@@ -143,6 +175,8 @@ bool_t board_check_legal(board_t* board) {
     return ret;
 }
 
+/* PRINTING */
+
 static void print_separator_line(int m, int n, FILE* stream) {
     int line_len = 4 * n * m + m + 1;
     int i;
@@ -187,6 +221,8 @@ void board_print(const board_t* board, FILE* stream, bool_t mark_errors) {
 
     print_separator_line(board->m, board->n, stream);
 }
+
+/* SERIALIZATION/DESERIALIZATION */
 
 static void serialize_cell(const cell_t* cell, FILE* stream) {
     fprintf(stream, "%d", cell->value);

@@ -1,3 +1,7 @@
+/**
+ * bool.h - Poor man's stdbool.h.
+ */
+
 #ifndef BOOL_H
 #define BOOL_H
 
