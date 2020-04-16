@@ -22,6 +22,13 @@ void board_init(board_t* board, int m, int n) {
 
 void board_destroy(board_t* board) { free(board->cells); }
 
+void board_clone(board_t* dest, const board_t* src) {
+    int block_size = board_block_size(src);
+
+    board_init(dest, src->m, src->n);
+    memcpy(dest->cells, src->cells, block_size * block_size);
+}
+
 int board_block_size(const board_t* board) { return board->m * board->n; }
 
 cell_t* board_access(board_t* board, int row, int col) {

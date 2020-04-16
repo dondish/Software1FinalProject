@@ -63,6 +63,11 @@ void board_init(board_t* board, int m, int n);
 void board_destroy(board_t* board);
 
 /**
+ * Clone `src` into `dest`.
+ */
+void board_clone(board_t* dest, const board_t* src);
+
+/**
  * Retrieve the block size of `board`. This is also the number of rows and
  * columns on the board.
  */
