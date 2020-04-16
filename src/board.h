@@ -5,11 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-typedef enum cell_flags {
-    CELL_FLAGS_NONE,
-    CELL_FLAGS_FIXED,
-    CELL_FLAGS_ERROR
-} cell_flags_t;
+typedef enum cell_flags { CF_NONE, CF_FIXED, CF_ERROR } cell_flags_t;
 
 typedef enum deserialize_status {
     DS_OK,

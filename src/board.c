@@ -8,12 +8,8 @@
 #include <string.h>
 
 bool_t cell_is_empty(const cell_t* cell) { return cell->value == 0; }
-bool_t cell_is_fixed(const cell_t* cell) {
-    return cell->flags == CELL_FLAGS_FIXED;
-}
-bool_t cell_is_error(const cell_t* cell) {
-    return cell->flags == CELL_FLAGS_ERROR;
-}
+bool_t cell_is_fixed(const cell_t* cell) { return cell->flags == CF_FIXED; }
+bool_t cell_is_error(const cell_t* cell) { return cell->flags == CF_ERROR; }
 
 void board_init(board_t* board, int m, int n) {
     int block_size = m * n;
@@ -51,7 +47,7 @@ const cell_t* board_access_block_const(const board_t* board, int block_row,
 
 static void cell_mark_error(cell_t* cell) {
     if (!cell_is_fixed(cell)) {
-        cell->flags = CELL_FLAGS_ERROR;
+        cell->flags = CF_ERROR;
     }
 }
 
@@ -122,7 +118,7 @@ static void clear_errors(board_t* board) {
         for (col = 0; col < block_size; col++) {
             cell_t* cell = board_access(board, row, col);
             if (cell_is_error(cell)) {
-                cell->flags = CELL_FLAGS_NONE;
+                cell->flags = CF_NONE;
             }
         }
     }
@@ -243,7 +239,7 @@ static deserialize_status_t deserialize_cell(cell_t* cell, int block_size,
             /* fixed empty cell */
             return DS_ERR_CELL;
         } else {
-            cell->flags = CELL_FLAGS_FIXED;
+            cell->flags = CF_FIXED;
         }
     } else {
         ungetc(next_char, stream);

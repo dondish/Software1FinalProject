@@ -76,10 +76,10 @@ static void test_board_print(void) {
     board_init(&board, 2, 5);
     cell = board_access(&board, 0, 3);
     cell->value = 5;
-    cell->flags = CELL_FLAGS_FIXED;
+    cell->flags = CF_FIXED;
     cell = board_access(&board, 1, 4);
     cell->value = 5;
-    cell->flags = CELL_FLAGS_ERROR;
+    cell->flags = CF_ERROR;
     cell = board_access(&board, 2, 6);
     cell->value = 6;
     cell = board_access(&board, 3, 5);
@@ -120,8 +120,8 @@ static void test_board_serialize(void) {
         }
     }
 
-    board_access(&board, 2, 4)->flags = CELL_FLAGS_FIXED;
-    board_access(&board, 3, 3)->flags = CELL_FLAGS_FIXED;
+    board_access(&board, 2, 4)->flags = CF_FIXED;
+    board_access(&board, 3, 3)->flags = CF_FIXED;
 
     stream = tmpfile();
 
@@ -168,7 +168,7 @@ static void test_board_deserialize(void) {
             if ((row == 2 && col == 4) || (row == 3 && col == 3)) {
                 assert(cell_is_fixed(cell));
             } else {
-                assert(cell->flags == CELL_FLAGS_NONE);
+                assert(cell->flags == CF_NONE);
             }
         }
     }
