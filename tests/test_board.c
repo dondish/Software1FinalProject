@@ -300,6 +300,20 @@ static void test_board_check_legal(void) {
                             "|      9.    |            |          5*|\n"
                             "----------------------------------------\n";
 
+    const char* expected3 = "----------------------------------------\n"
+                            "|      6.  7 |            |          5 |\n"
+                            "|            |            |            |\n"
+                            "|            |      5     |          2.|\n"
+                            "----------------------------------------\n"
+                            "|            |            |            |\n"
+                            "|            |            |      4.    |\n"
+                            "|            |            |            |\n"
+                            "----------------------------------------\n"
+                            "|            |            |  5         |\n"
+                            "|            |            |            |\n"
+                            "|      9.    |            |          7 |\n"
+                            "----------------------------------------\n";
+
     int row;
     int col;
 
@@ -329,6 +343,14 @@ static void test_board_check_legal(void) {
     stream = tmpfile();
     board_print(&board, stream, TRUE);
     check_contents(stream, expected2);
+
+    board_access(&board, 8, 8)->value = 7;
+    board_access(&board, 0, 2)->value = 7;
+    assert(board_check_legal(&board));
+
+    stream = tmpfile();
+    board_print(&board, stream, TRUE);
+    check_contents(stream, expected3);
 }
 
 int main() {

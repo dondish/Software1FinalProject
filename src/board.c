@@ -112,13 +112,31 @@ static cell_t* retrieve_by_block(board_t* board, int ctx, int local_off) {
                               local_col);
 }
 
+static void clear_errors(board_t* board) {
+    int block_size = board_block_size(board);
+
+    int row;
+    int col;
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            cell_t* cell = board_access(board, row, col);
+            if (cell_is_error(cell)) {
+                cell->flags = CELL_FLAGS_NONE;
+            }
+        }
+    }
+}
+
 bool_t board_check_legal(board_t* board) {
     int block_size = board_block_size(board);
     val_map_item_t* map = checked_calloc(block_size, sizeof(val_map_item_t));
 
     bool_t ret = TRUE;
-
     int i;
+
+    clear_errors(board);
+
     for (i = 0; i < block_size; i++) {
         ret &= check_legal(board, map, i, retrieve_by_row);
         ret &= check_legal(board, map, i, retrieve_by_col);
