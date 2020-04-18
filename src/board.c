@@ -52,7 +52,7 @@ const cell_t* board_access_block_const(const board_t* board, int block_row,
                               local_col);
 }
 
-/* LEGALITY CHECKING */
+/* LEGALITY CHECKS/ERROR MARKING */
 
 /**
  * Abstraction for a function that can retrieve a cell based on two indices (a
@@ -60,6 +60,13 @@ const cell_t* board_access_block_const(const board_t* board, int block_row,
  * the generalized legality algorithm to abstract row, column and block checks.
  */
 typedef cell_t* (*cell_retriever_t)(board_t* board, int ctx, int local_off);
+
+/**
+ * Callback type invoked when two conflicting cells are found. If the callback
+ * returns false, processing is halted and the legality check returns false as
+ * well.
+ */
+typedef bool_t (*cell_conflict_handler_t)(cell_t* a, cell_t* b);
 
 /**
  * Value map item, used to track the last cell on the board in which a given
@@ -72,25 +79,22 @@ typedef struct {
 } val_map_item_t;
 
 /**
- * Mark `cell` as an error if it is not fixed.
- */
-static void cell_mark_error(cell_t* cell) {
-    if (!cell_is_fixed(cell)) {
-        cell->flags = CF_ERROR;
-    }
-}
-
-/**
  * Check that each of the non-empty cells retrieved by `retriever` has a
- * distinct value, marking any non-fixed conflicting cells as errors. `ctx` is
- * held constant, while `local_off` is iterated across `[0, block_size)`. `map`
- * is used as scratch storage during the check, and must contain at least
+ * distinct value, invoking `handler` on conflicting cells.
+ *
+ * If `handler` returns false for a given pair of cells, no further checks are
+ * performed and the function returns false. Otherwise, true is returned.
+ *
+ * `ctx` is held constant while `local_off` is iterated across
+ * `[0, block_size)`.
+ *
+ * `map` is used as scratch storage during the check, and must contain at least
  * `block_size` items.
  */
 static bool_t check_legal(board_t* board, val_map_item_t* map, int ctx,
-                          cell_retriever_t retrieve) {
+                          cell_retriever_t retrieve,
+                          cell_conflict_handler_t handler) {
     int block_size = board_block_size(board);
-    bool_t ret = TRUE;
     int local_off;
 
     memset(map, 0, block_size * sizeof(val_map_item_t));
@@ -102,10 +106,11 @@ static bool_t check_legal(board_t* board, val_map_item_t* map, int ctx,
             val_map_item_t* item = map + (cell->value - 1);
 
             if (item->occupied) {
-                /* This value exists in another cell: mark both as errors. */
-                cell_mark_error(retrieve(board, ctx, item->local_off));
-                cell_mark_error(cell);
-                ret = FALSE;
+                /* We've seen this value before - report the conflict. */
+                cell_t* old_cell = retrieve(board, ctx, item->local_off);
+                if (!handler(old_cell, cell)) {
+                    return FALSE;
+                }
             }
 
             item->occupied = TRUE;
@@ -113,7 +118,7 @@ static bool_t check_legal(board_t* board, val_map_item_t* map, int ctx,
         }
     }
 
-    return ret;
+    return TRUE;
 }
 
 /**
@@ -147,6 +152,50 @@ static cell_t* retrieve_by_block(board_t* board, int ctx, int local_off) {
                               local_col);
 }
 
+/**
+ * Conflict handler that aborts further checking of the board.
+ */
+static bool_t abort_check_handler(cell_t* a, cell_t* b) {
+    (void)a;
+    (void)b;
+    return FALSE;
+}
+
+bool_t board_is_legal(const board_t* board) {
+    board_t* nonconst_board = (board_t*)board;
+
+    int block_size = board_block_size(board);
+    val_map_item_t* map = checked_calloc(block_size, sizeof(val_map_item_t));
+
+    int i;
+    bool_t ret = TRUE;
+
+    for (i = 0; i < block_size; i++) {
+        ret = check_legal(nonconst_board, map, i, retrieve_by_row,
+                          abort_check_handler);
+        if (!ret) {
+            break;
+        }
+
+        ret = check_legal(nonconst_board, map, i, retrieve_by_col,
+                          abort_check_handler);
+        if (!ret) {
+            break;
+        }
+
+        ret = check_legal(nonconst_board, map, i, retrieve_by_block,
+                          abort_check_handler);
+        if (!ret) {
+            break;
+        }
+    }
+
+    free(map);
+    return ret;
+}
+
+/* ERROR MARKING */
+
 static void clear_errors(board_t* board) {
     int block_size = board_block_size(board);
 
@@ -163,23 +212,40 @@ static void clear_errors(board_t* board) {
     }
 }
 
-bool_t board_check_legal(board_t* board) {
+/**
+ * Mark `cell` as an error if it is not fixed.
+ */
+static void cell_mark_error(cell_t* cell) {
+    if (!cell_is_fixed(cell)) {
+        cell->flags = CF_ERROR;
+    }
+}
+
+/**
+ * Conflict handler that marks offending cells as errors and continues
+ * processing.
+ */
+static bool_t mark_errors_handler(cell_t* a, cell_t* b) {
+    cell_mark_error(a);
+    cell_mark_error(b);
+    return TRUE;
+}
+
+void board_mark_errors(board_t* board) {
     int block_size = board_block_size(board);
     val_map_item_t* map = checked_calloc(block_size, sizeof(val_map_item_t));
 
-    bool_t ret = TRUE;
     int i;
 
     clear_errors(board);
 
     for (i = 0; i < block_size; i++) {
-        ret &= check_legal(board, map, i, retrieve_by_row);
-        ret &= check_legal(board, map, i, retrieve_by_col);
-        ret &= check_legal(board, map, i, retrieve_by_block);
+        check_legal(board, map, i, retrieve_by_row, mark_errors_handler);
+        check_legal(board, map, i, retrieve_by_col, mark_errors_handler);
+        check_legal(board, map, i, retrieve_by_block, mark_errors_handler);
     }
 
     free(map);
-    return ret;
 }
 
 /* PRINTING */

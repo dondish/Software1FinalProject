@@ -322,7 +322,7 @@ static void test_board_check_legal(void) {
     assert(board_deserialize(&board, stream) == DS_OK);
     fclose(stream);
 
-    assert(board_check_legal(&board));
+    assert(board_is_legal(&board));
 
     for (row = 0; row < 9; row++) {
         for (col = 0; col < 9; col++) {
@@ -331,23 +331,26 @@ static void test_board_check_legal(void) {
     }
 
     board_access(&board, 0, 2)->value = 6;
-    assert(!board_check_legal(&board));
+    assert(!board_is_legal(&board));
 
+    board_mark_errors(&board);
     stream = tmpfile();
     board_print(&board, stream, TRUE);
     check_contents(stream, expected1);
 
     board_access(&board, 8, 8)->value = 5;
-    assert(!board_check_legal(&board));
+    assert(!board_is_legal(&board));
 
+    board_mark_errors(&board);
     stream = tmpfile();
     board_print(&board, stream, TRUE);
     check_contents(stream, expected2);
 
     board_access(&board, 8, 8)->value = 7;
     board_access(&board, 0, 2)->value = 7;
-    assert(board_check_legal(&board));
+    assert(board_is_legal(&board));
 
+    board_mark_errors(&board);
     stream = tmpfile();
     board_print(&board, stream, TRUE);
     check_contents(stream, expected3);

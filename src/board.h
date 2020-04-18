@@ -92,9 +92,14 @@ const cell_t* board_access_block_const(const board_t* board, int block_row,
 
 /**
  * Check whether `board` is legal (in the sense that no two "neighbors" share
- * the same value), marking any conflicting non-fixed cells as errors.
+ * the same value).
  */
-bool_t board_check_legal(board_t* board);
+bool_t board_is_legal(const board_t* board);
+
+/**
+ * Mark conflicting non-fixed cells on the board as errors.
+ */
+void board_mark_errors(board_t* board);
 
 /**
  * Print `board` to `stream` in a human-readable format. If `mark_errors` is

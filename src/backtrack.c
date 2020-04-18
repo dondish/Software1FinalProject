@@ -65,7 +65,7 @@ int num_solutions(board_t* board) {
             }
 
             board->cells[state->idx].value = value;
-        } while (!board_check_legal(board));
+        } while (!board_is_legal(board));
 
         if (value > block_size) {
             /* We've exhausted all possibilities for this cell - reset it
