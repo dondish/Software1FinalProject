@@ -6,3 +6,4 @@ function(test_module NAME)
 endfunction()
 
 test_module(board)
+test_module(backtrack)
