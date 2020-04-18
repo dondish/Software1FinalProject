@@ -20,14 +20,16 @@ static void backtrack_state_push(list_t* stack, int idx) {
     list_push(stack, state);
 }
 
+static void backtrack_state_pop(list_t* stack) { free(list_pop(stack)); }
+
 static backtrack_state_t* backtrack_state_top(list_t* stack) {
     return stack->tail->value;
 }
 
-static bool_t advance_to_nonempty(const board_t* board, int* idx) {
+static bool_t advance_to_empty(const board_t* board, int* idx) {
     int block_size = board_block_size(board);
 
-    while (cell_is_empty(&board->cells[*idx])) {
+    while (!cell_is_empty(&board->cells[*idx])) {
         (*idx)++;
         if (*idx == block_size * block_size) {
             return FALSE;
@@ -47,8 +49,10 @@ int num_solutions(board_t* board) {
 
     list_init(&stack);
 
-    if (advance_to_nonempty(board, &idx)) {
+    if (advance_to_empty(board, &idx)) {
         backtrack_state_push(&stack, idx);
+    } else {
+        count = board_is_legal(board);
     }
 
     while (!list_is_empty(&stack)) {
@@ -70,11 +74,11 @@ int num_solutions(board_t* board) {
             /* We've exhausted all possibilities for this cell - reset it
              * and return to the previous one. */
             board->cells[state->idx].value = 0;
-            list_pop(&stack);
+            backtrack_state_pop(&stack);
         } else {
             int next_idx = state->idx;
 
-            if (advance_to_nonempty(board, &next_idx)) {
+            if (advance_to_empty(board, &next_idx)) {
                 /* We still have more empty cells to explore.  */
                 backtrack_state_push(&stack, next_idx);
             } else {
