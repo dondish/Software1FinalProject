@@ -156,9 +156,9 @@ int parse_line(FILE* stream, command_t* cmd, game_mode_t mode) {
             return P_INVALID_NUM_OF_ARGS;
         }
 
-        if (!sscanf(args[0], "%d", &arg.i))
+        if (!sscanf(args[0], "%d", &arg.i) || arg.i < 0)
             return P_INVALID_ARGUMENTS;
-        if (!sscanf(args[1], "%d", &arg.j))
+        if (!sscanf(args[1], "%d", &arg.j) || arg.j <= 0)
             return P_INVALID_ARGUMENTS;
 
         cmd->arg.twointegers = arg;

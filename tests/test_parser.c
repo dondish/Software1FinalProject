@@ -275,11 +275,17 @@ static void test_parsing_set() {
     stream = fill_stream(set_three_arg);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
     assert(cmd.type == CT_SET);
+    assert(cmd.arg.threeintegers.i == 1);
+    assert(cmd.arg.threeintegers.j == 2);
+    assert(cmd.arg.threeintegers.k == 3);
     fclose(stream);
 
     stream = fill_stream(set_three_arg);
     assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
     assert(cmd.type == CT_SET);
+    assert(cmd.arg.threeintegers.i == 1);
+    assert(cmd.arg.threeintegers.j == 2);
+    assert(cmd.arg.threeintegers.k == 3);
     fclose(stream);
 
     stream = fill_stream(set_three_wrong_arg);
@@ -309,6 +315,107 @@ static void test_parsing_validate() {
     fclose(stream);
 }
 
+static void test_parsing_generate() {
+    const char only_generate[] = "generate";
+    const char one_arg_generate[] = "generate 1";
+    const char one_wrong_arg_generate[] = "generate -1";
+    const char two_arg_generate[] = "generate 1 2";
+    const char two_wrong_arg_generate[] = "generate -1 1";
+    const char two_wrong_arg_generate2[] = "generate 0 0";
+    const char two_wrong_arg_generate3[] = "generate 1 x";
+    const char two_wrong_arg_generate4[] = "generate x 1";
+    FILE *stream;
+    command_t cmd;
+
+    stream = fill_stream(only_generate);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(one_arg_generate);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(one_wrong_arg_generate);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(only_generate);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(one_arg_generate);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(one_wrong_arg_generate);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_arg_generate);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_arg_generate);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_wrong_arg_generate);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_wrong_arg_generate2);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_wrong_arg_generate3);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_wrong_arg_generate4);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_arg_generate);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
+    assert(cmd.type ==  CT_GENERATE);
+    assert(cmd.arg.twointegers.i == 1);
+    assert(cmd.arg.twointegers.j == 2);
+    fclose(stream);
+    
+    stream = fill_stream(two_wrong_arg_generate);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_ARGUMENTS);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_wrong_arg_generate2);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_ARGUMENTS);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_wrong_arg_generate3);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_ARGUMENTS);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+    stream = fill_stream(two_wrong_arg_generate4);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_ARGUMENTS);
+    assert(cmd.type ==  CT_GENERATE);
+    fclose(stream);
+
+}
+
 int main() {
     test_parse_line_too_long();
     test_ignore_empty_line();
@@ -319,5 +426,6 @@ int main() {
     test_parsing_print_board();
     test_parsing_set();
     test_parsing_validate();
+    test_parsing_generate();
     return 0;
 }
