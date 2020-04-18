@@ -56,7 +56,7 @@ int num_solutions(board_t* board) {
     if (advance_to_empty(board, &idx)) {
         backtrack_state_push(&stack, idx);
     } else {
-        count = board_is_legal(board);
+        return board_is_legal(board);
     }
 
     while (!list_is_empty(&stack)) {
