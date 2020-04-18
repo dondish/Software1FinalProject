@@ -25,5 +25,17 @@ int main() {
     VAL(2, 1) = 1;
     assert(num_solutions(&board) == 2);
 
+    VAL(2, 0) = 2;
+    VAL(2, 2) = 4;
+    VAL(2, 3) = 3;
+    VAL(3, 0) = 4;
+    VAL(3, 1) = 3;
+    VAL(3, 2) = 2;
+    VAL(3, 3) = 1;
+    assert(num_solutions(&board) == 1);
+
+    VAL(3, 3) = 3;
+    assert(num_solutions(&board) == 0);
+
     return 0;
 }
