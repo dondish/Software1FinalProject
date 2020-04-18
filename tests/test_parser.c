@@ -288,6 +288,27 @@ static void test_parsing_set() {
     fclose(stream);
 }
 
+static void test_parsing_validate() {
+    const char validate[] = "validate";
+    FILE *stream;
+    command_t cmd;
+
+    stream = fill_stream(validate);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_VALIDATE);
+    fclose(stream);
+
+    stream = fill_stream(validate);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
+    assert(cmd.type == CT_VALIDATE);
+    fclose(stream);
+
+    stream = fill_stream(validate);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_VALIDATE);
+    fclose(stream);
+}
+
 int main() {
     test_parse_line_too_long();
     test_ignore_empty_line();
@@ -297,5 +318,6 @@ int main() {
     test_parsing_mark_errors();
     test_parsing_print_board();
     test_parsing_set();
+    test_parsing_validate();
     return 0;
 }
