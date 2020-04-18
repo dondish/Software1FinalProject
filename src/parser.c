@@ -28,10 +28,21 @@ static void read_rest_of_line(FILE* stream) {
     }
 }
 
+static char* duplicate_str(const char* str) {
+    char* dup;
+
+    if (!str) {
+        return NULL;
+    }
+
+    dup = checked_malloc(strlen(str));
+    strcpy(dup, str);
+    return dup;
+}
+
 int parse_line(FILE* stream, command_t* cmd, game_mode_t mode) {
     char line[258] = {0};
     char* tester = fgets(line, 258, stream);
-    char* strarg = checked_malloc(257);
     char* curr;
 
     if ((tester == NULL && !feof(stream)) ||
@@ -55,23 +66,17 @@ int parse_line(FILE* stream, command_t* cmd, game_mode_t mode) {
             return P_INVALID_NUM_OF_ARGS;
         }
 
-        strcpy(strarg, temparg);
-        arg.str = strarg;
+        arg.str = duplicate_str(temparg);
         cmd->arg.str = arg;
     } else if (!strcmp(curr, "edit")) {
         command_arg_str_t arg;
+
+        /* Note: not using extract_arguments as filename is optional. */
         char* temparg = strtok_ws(NULL);
 
         cmd->type = CT_EDIT;
 
-        if (temparg == NULL) {
-            free(strarg);
-            strarg = NULL;
-        } else {
-            strcpy(strarg, temparg);
-        }
-
-        arg.str = strarg;
+        arg.str = duplicate_str(temparg);
         cmd->arg.str = arg;
     } else if (!strcmp(curr, "mark_errors")) {
         command_arg_bool_t boolt;
@@ -165,7 +170,10 @@ int parse_line(FILE* stream, command_t* cmd, game_mode_t mode) {
     } else {
         return P_INVALID_COMMAND_NAME;
     }
-    if (strtok_ws(NULL) != NULL)
+
+    if (strtok_ws(NULL) != NULL) {
         return P_INVALID_NUM_OF_ARGS;
+    }
+
     return P_SUCCESS;
 }
