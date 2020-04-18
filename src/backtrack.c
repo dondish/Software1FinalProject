@@ -26,6 +26,10 @@ static backtrack_state_t* backtrack_state_top(list_t* stack) {
     return stack->tail->value;
 }
 
+/**
+ * Advance `idx` to the nearest empty cell, returning false if the end of the
+ * board has been reached.
+ */
 static bool_t advance_to_empty(const board_t* board, int* idx) {
     int block_size = board_block_size(board);
 
