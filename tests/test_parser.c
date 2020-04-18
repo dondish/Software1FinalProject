@@ -103,6 +103,9 @@ static void test_too_many_args() {
     const char mark_errors[] = "mark_errors 1 2";
     const char print_board[] = "print_board 1";
     const char set[] = "set 1 2 3 4";
+    const char validate[] = "validate 1";
+    const char guess[] = "guess 0.5 4";
+    const char generate[] = "generate 2 4 4";
     FILE* stream;
     command_t cmd;
 
@@ -124,6 +127,19 @@ static void test_too_many_args() {
 
     stream = fill_stream(set);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    fclose(stream);
+
+    stream = fill_stream(validate);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    fclose(stream);
+
+    stream = fill_stream(guess);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    fclose(stream);
+
+
+    stream = fill_stream(generate);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_NUM_OF_ARGS);
     fclose(stream);
 }
 
@@ -315,6 +331,52 @@ static void test_parsing_validate() {
     fclose(stream);
 }
 
+static void test_parsing_guess() {
+    const char only_guess[] = "guess";
+    const char one_arg_guess[] = "guess 1";
+    const char one_arg_guess_float[] = "guess 0.5";
+    const char one_arg_guess_wrong[] = "guess x";
+    FILE *stream;
+    command_t cmd;
+
+    stream = fill_stream(only_guess);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_GUESS);
+    fclose(stream);
+
+    stream = fill_stream(one_arg_guess);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_GUESS);
+    assert(cmd.arg.onefloat.val == 1);
+    fclose(stream);
+
+    stream = fill_stream(one_arg_guess_float);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_GUESS);
+    assert(cmd.arg.onefloat.val == 0.5);
+    fclose(stream);
+
+    stream = fill_stream(one_arg_guess_wrong);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_ARGUMENTS);
+    assert(cmd.type == CT_GUESS);
+    fclose(stream);
+    
+    stream = fill_stream(one_arg_guess);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_GUESS);
+    fclose(stream);
+
+    stream = fill_stream(one_arg_guess);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_GUESS);
+    fclose(stream);
+
+    stream = fill_stream(one_arg_guess_wrong);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_GUESS);
+    fclose(stream);
+}
+
 static void test_parsing_generate() {
     const char only_generate[] = "generate";
     const char one_arg_generate[] = "generate 1";
@@ -426,6 +488,7 @@ int main() {
     test_parsing_print_board();
     test_parsing_set();
     test_parsing_validate();
+    test_parsing_guess();
     test_parsing_generate();
     return 0;
 }
