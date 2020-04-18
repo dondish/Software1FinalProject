@@ -12,11 +12,12 @@ typedef struct {
     int value;
 } backtrack_state_t;
 
-static void backtrack_state_push(list_t* stack,
-                                 const backtrack_state_t* state) {
-    void* heap_state = checked_malloc(sizeof(backtrack_state_t));
-    memcpy(heap_state, state, sizeof(backtrack_state_t));
-    list_push(stack, heap_state);
+static void backtrack_state_push(list_t* stack, int idx) {
+    backtrack_state_t* state = checked_malloc(sizeof(backtrack_state_t));
+    state->idx = idx;
+    state->value = 0; /* `value` is incremented on every iteration, so start
+                         before the minimal one. */
+    list_push(stack, state);
 }
 
 static backtrack_state_t* backtrack_state_top(list_t* stack) {
@@ -47,11 +48,7 @@ int num_solutions(board_t* board) {
     list_init(&stack);
 
     if (advance_to_nonempty(board, &idx)) {
-        backtrack_state_t init;
-        init.idx = idx;
-        init.value = 0; /* `value` is incremented on every iteration, so start
-                           before the minimal one. */
-        backtrack_state_push(&stack, &init);
+        backtrack_state_push(&stack, idx);
     }
 
     while (!list_is_empty(&stack)) {
@@ -77,10 +74,7 @@ int num_solutions(board_t* board) {
 
             if (advance_to_nonempty(board, &next_idx)) {
                 /* We still have more empty cells to explore.  */
-                backtrack_state_t next;
-                next.idx = next_idx;
-                next.value = 0;
-                backtrack_state_push(&stack, &next);
+                backtrack_state_push(&stack, next_idx);
             } else {
                 /* We've finished the board - record our success! */
                 count++;
