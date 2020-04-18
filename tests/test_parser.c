@@ -103,7 +103,7 @@ static void test_too_many_args() {
     const char mark_errors[] = "mark_errors 1 2";
     const char print_board[] = "print_board 1";
     const char set[] = "set 1 2 3 4";
-    FILE *stream;
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(solve);
@@ -170,7 +170,7 @@ static void test_parsing_mark_errors() {
     const char nonbool_mark_errors2[] = "mark_errors -1";
     const char nonbool_mark_errors3[] = "mark_errors hi 2";
     const char correct_mark_errors[] = "mark_errors 1";
-    FILE *stream;
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(only_mark_errors);
@@ -212,7 +212,7 @@ static void test_parsing_mark_errors() {
 
 static void test_parsing_print_board() {
     const char text[] = "print_board";
-    FILE *stream;
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(text);
@@ -239,7 +239,7 @@ static void test_parsing_set() {
     const char set_two_wrong_arg[] = "set 1 x";
     const char set_three_arg[] = "set 1 2 3";
     const char set_three_wrong_arg[] = "set 1 2 x";
-    FILE *stream;
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(only_set);
@@ -271,7 +271,6 @@ static void test_parsing_set() {
     assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_NUM_OF_ARGS);
     assert(cmd.type == CT_SET);
     fclose(stream);
-    
 
     stream = fill_stream(set_three_arg);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
