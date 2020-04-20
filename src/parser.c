@@ -41,8 +41,6 @@ typedef struct {
     command_arg_type_t payload_type;
 } command_desc_t;
 
-void command_arg_str_destroy(command_arg_str_t* arg) { free(arg->str); }
-
 /**
  * Tokenize `str` on whitespace with `strtok`.
  */
@@ -106,7 +104,7 @@ static parser_error_codes_t parse_arg_payload(command_arg_type_t type,
         if (!extract_arguments(&str, 1)) {
             return P_INVALID_NUM_OF_ARGS;
         }
-        arg->str.str = duplicate_str(str);
+        arg->str_val = duplicate_str(str);
         break;
     }
     case PT_OPT_STR: {
@@ -115,7 +113,7 @@ static parser_error_codes_t parse_arg_payload(command_arg_type_t type,
         if (strtok_ws(NULL) != NULL) {
             return P_INVALID_NUM_OF_ARGS;
         }
-        arg->str.str = duplicate_str(str);
+        arg->str_val = duplicate_str(str);
         break;
     }
     case PT_BOOL: {
@@ -130,7 +128,7 @@ static parser_error_codes_t parse_arg_payload(command_arg_type_t type,
             return P_INVALID_ARGUMENTS;
         }
 
-        arg->bool.val = (bool_t)val;
+        arg->bool_val = (bool_t)val;
         break;
     }
     case PT_FLOAT: {
@@ -145,7 +143,7 @@ static parser_error_codes_t parse_arg_payload(command_arg_type_t type,
             return P_INVALID_ARGUMENTS;
         }
 
-        arg->onefloat.val = val;
+        arg->float_val = val;
         break;
     }
     case PT_INT2: {
@@ -160,8 +158,8 @@ static parser_error_codes_t parse_arg_payload(command_arg_type_t type,
             return P_INVALID_ARGUMENTS;
         }
 
-        arg->twointegers.i = vals[0];
-        arg->twointegers.j = vals[1];
+        arg->two_int_val.i = vals[0];
+        arg->two_int_val.j = vals[1];
         break;
     }
     case PT_INT3: {
@@ -176,9 +174,9 @@ static parser_error_codes_t parse_arg_payload(command_arg_type_t type,
             return P_INVALID_ARGUMENTS;
         }
 
-        arg->threeintegers.i = vals[0];
-        arg->threeintegers.j = vals[1];
-        arg->threeintegers.k = vals[2];
+        arg->three_int_val.i = vals[0];
+        arg->three_int_val.j = vals[1];
+        arg->three_int_val.k = vals[2];
         break;
     }
     }

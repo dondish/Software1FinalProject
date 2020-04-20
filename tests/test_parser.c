@@ -157,7 +157,7 @@ static void test_parsing_solve() {
     stream = fill_stream(solve_correct);
     assert(parse_line(stream, &cmd, GM_INIT) == P_SUCCESS);
     assert(cmd.type == CT_SOLVE);
-    assert(cmd.arg.str.str != NULL && !strcmp(cmd.arg.str.str, "idk"));
+    assert(cmd.arg.str_val != NULL && !strcmp(cmd.arg.str_val, "idk"));
     fclose(stream);
 }
 
@@ -170,13 +170,13 @@ static void test_parsing_edit() {
     stream = fill_stream(only_edit);
     assert(parse_line(stream, &cmd, GM_INIT) == P_SUCCESS);
     assert(cmd.type == CT_EDIT);
-    assert(cmd.arg.str.str == NULL);
+    assert(cmd.arg.str_val == NULL);
     fclose(stream);
 
     stream = fill_stream(edit_plus_arg);
     assert(parse_line(stream, &cmd, GM_INIT) == P_SUCCESS);
     assert(cmd.type == CT_EDIT);
-    assert(cmd.arg.str.str != NULL && !strcmp(cmd.arg.str.str, "idk"));
+    assert(cmd.arg.str_val != NULL && !strcmp(cmd.arg.str_val, "idk"));
     fclose(stream);
 }
 
@@ -222,7 +222,7 @@ static void test_parsing_mark_errors() {
     stream = fill_stream(correct_mark_errors);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
     assert(cmd.type == CT_MARK_ERRORS);
-    assert(cmd.arg.bool.val == TRUE);
+    assert(cmd.arg.bool_val == TRUE);
     fclose(stream);
 }
 
@@ -291,17 +291,17 @@ static void test_parsing_set() {
     stream = fill_stream(set_three_arg);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
     assert(cmd.type == CT_SET);
-    assert(cmd.arg.threeintegers.i == 1);
-    assert(cmd.arg.threeintegers.j == 2);
-    assert(cmd.arg.threeintegers.k == 3);
+    assert(cmd.arg.three_int_val.i == 1);
+    assert(cmd.arg.three_int_val.j == 2);
+    assert(cmd.arg.three_int_val.k == 3);
     fclose(stream);
 
     stream = fill_stream(set_three_arg);
     assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
     assert(cmd.type == CT_SET);
-    assert(cmd.arg.threeintegers.i == 1);
-    assert(cmd.arg.threeintegers.j == 2);
-    assert(cmd.arg.threeintegers.k == 3);
+    assert(cmd.arg.three_int_val.i == 1);
+    assert(cmd.arg.three_int_val.j == 2);
+    assert(cmd.arg.three_int_val.k == 3);
     fclose(stream);
 
     stream = fill_stream(set_three_wrong_arg);
@@ -347,13 +347,13 @@ static void test_parsing_guess() {
     stream = fill_stream(one_arg_guess);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
     assert(cmd.type == CT_GUESS);
-    assert(cmd.arg.onefloat.val == 1);
+    assert(cmd.arg.float_val == 1);
     fclose(stream);
 
     stream = fill_stream(one_arg_guess_float);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
     assert(cmd.type == CT_GUESS);
-    assert(cmd.arg.onefloat.val == 0.5);
+    assert(cmd.arg.float_val == 0.5);
     fclose(stream);
 
     stream = fill_stream(one_arg_guess_wrong);
@@ -440,8 +440,8 @@ static void test_parsing_generate() {
     stream = fill_stream(two_arg_generate);
     assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
     assert(cmd.type == CT_GENERATE);
-    assert(cmd.arg.twointegers.i == 1);
-    assert(cmd.arg.twointegers.j == 2);
+    assert(cmd.arg.two_int_val.i == 1);
+    assert(cmd.arg.two_int_val.j == 2);
     fclose(stream);
 
     stream = fill_stream(two_wrong_arg_generate);
