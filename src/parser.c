@@ -55,7 +55,8 @@ static char* duplicate_str(const char* str) {
     return dup;
 }
 
-int parse_line(FILE* stream, command_t* cmd, game_mode_t mode) {
+parser_error_codes_t parse_line(FILE* stream, command_t* cmd,
+                                game_mode_t mode) {
     char line[258] = {0};
     char* tester = fgets(line, 258, stream);
     char* curr;

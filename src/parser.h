@@ -60,10 +60,6 @@ typedef struct command_arg_float {
     float val;
 } command_arg_float_t;
 
-typedef struct command_arg_one_int {
-    int i;
-} command_arg_one_int_t;
-
 /**
  * Argument payload representing commands with two integer arguments (generate,
  * hint, guess_hint).
@@ -101,7 +97,6 @@ typedef union {
     command_arg_str_t str;
     command_arg_bool_t bool;
     command_arg_float_t onefloat;
-    command_arg_one_int_t oneinteger;
     command_arg_two_int_t twointegers;
     command_arg_three_int_t threeintegers;
 } command_arg_t;
@@ -129,6 +124,6 @@ void command_arg_str_destroy(command_arg_str_t* arg);
  * If parsing succeeds and the command contains a string argument, it must be
  * cleaned up with `command_arg_str_destroy`.
  */
-int parse_line(FILE* stream, command_t* cmd, game_mode_t mode);
+parser_error_codes_t parse_line(FILE* stream, command_t* cmd, game_mode_t mode);
 
 #endif
