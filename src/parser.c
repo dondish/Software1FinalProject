@@ -225,13 +225,16 @@ parser_error_codes_t parse_line(FILE* stream, command_t* cmd,
     char* name;
     size_t i;
 
-    fgets(line, 258, stream);
+    if (!fgets(line, 258, stream)) {
+        if (feof(stream)) {
+            cmd->type = CT_EXIT;
+            return P_SUCCESS;
+        }
 
-    if (ferror(stream)) {
         return P_IO;
     }
 
-    if (line[256] != 0 && line[256] != '\n') {
+    if (line[256] != '\0' && line[256] != '\n') {
         return read_rest_of_line(stream) ? P_LINE_TOO_LONG : P_IO;
     }
 

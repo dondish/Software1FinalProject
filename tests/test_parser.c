@@ -83,8 +83,8 @@ static void test_parse_line_too_long() {
     fclose(stream);
 }
 
-static void test_ignore_empty_line() {
-    const char empty[] = "";
+static void test_ignore_blank_line() {
+    const char empty[] = "\n";
     const char whitespaced[] = "     ";
     command_t cmd;
     FILE* stream;
@@ -96,6 +96,13 @@ static void test_ignore_empty_line() {
     stream = fill_stream(whitespaced);
     assert(parse_line(stream, &cmd, GM_INIT) == P_IGNORE);
     fclose(stream);
+}
+
+static void test_eof_exit() {
+    command_t command;
+    FILE* stream = fill_stream("");
+    assert(parse_line(stream, &command, GM_INIT) == P_SUCCESS);
+    assert(command.type == CT_EXIT);
 }
 
 static void test_too_many_args() {
@@ -457,7 +464,8 @@ static void test_parsing_generate() {
 
 int main() {
     test_parse_line_too_long();
-    test_ignore_empty_line();
+    test_ignore_blank_line();
+    test_eof_exit();
     test_too_many_args();
     test_parsing_solve();
     test_parsing_edit();
