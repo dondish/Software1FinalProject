@@ -7,3 +7,4 @@ endfunction()
 
 test_module(board)
 test_module(backtrack)
+test_module(parser)
