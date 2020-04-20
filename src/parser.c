@@ -1,4 +1,5 @@
 #include "parser.h"
+
 #include "bool.h"
 #include "checked_alloc.h"
 #include "game.h"
@@ -9,8 +10,16 @@
 
 void command_arg_str_destroy(command_arg_str_t* arg) { free(arg->str); }
 
+/**
+ * Tokenize `str` on whitespace with `strtok`.
+ */
 static char* strtok_ws(char* str) { return strtok(str, " \n\t\v"); }
 
+/**
+ * Attempt to extract _exactly_ `size` whitespace-separated arguments from the
+ * current string being tokenized by `strtok`, storing the results to `args`.
+ * Returns whether extraction succeeded.
+ */
 static bool_t extract_arguments(char** args, size_t size) {
     size_t i = 0;
     char* tmp;
@@ -23,11 +32,17 @@ static bool_t extract_arguments(char** args, size_t size) {
     return strtok_ws(NULL) == NULL;
 }
 
+/**
+ * Consume the rest of the current line in `stream`.
+ */
 static void read_rest_of_line(FILE* stream) {
     while (!feof(stream) && fgetc(stream) != '\n') {
     }
 }
 
+/**
+ * Copy the contents of `str` into a new heap-allocated string.
+ */
 static char* duplicate_str(const char* str) {
     char* dup;
 
@@ -35,7 +50,7 @@ static char* duplicate_str(const char* str) {
         return NULL;
     }
 
-    dup = checked_malloc(strlen(str));
+    dup = checked_malloc(strlen(str) + 1);
     strcpy(dup, str);
     return dup;
 }
