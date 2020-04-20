@@ -80,6 +80,7 @@ typedef struct command_arg_three_int {
 
 typedef enum parser_error_codes {
     P_SUCCESS,       /* Parsing succeeded */
+    P_IO,            /* Unknown IO error */
     P_LINE_TOO_LONG, /* Line length exceeded 256 characters */
     P_IGNORE,        /* Line was blank and should be ignored */
     P_INVALID_MODE,  /* The parsed command was invalid in the specified mode */

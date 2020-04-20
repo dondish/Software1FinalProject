@@ -33,11 +33,17 @@ static bool_t extract_arguments(char** args, size_t size) {
 }
 
 /**
- * Consume the rest of the current line in `stream`.
+ * Consume the rest of the current line in `stream`, returning `FALSE` on IO
+ * error.
  */
-static void read_rest_of_line(FILE* stream) {
-    while (!feof(stream) && fgetc(stream) != '\n') {
-    }
+static bool_t read_rest_of_line(FILE* stream) {
+    char c;
+
+    do {
+        c = fgetc(stream);
+    } while (c != '\n' && c != EOF);
+
+    return !ferror(stream);
 }
 
 /**
@@ -58,13 +64,16 @@ static char* duplicate_str(const char* str) {
 parser_error_codes_t parse_line(FILE* stream, command_t* cmd,
                                 game_mode_t mode) {
     char line[258] = {0};
-    char* tester = fgets(line, 258, stream);
     char* curr;
 
-    if ((tester == NULL && !feof(stream)) ||
-        (line[256] != 0 && line[256] != '\n')) {
-        read_rest_of_line(stream);
-        return P_LINE_TOO_LONG;
+    fgets(line, 258, stream);
+
+    if (ferror(stream)) {
+        return P_IO;
+    }
+
+    if (line[256] != 0 && line[256] != '\n') {
+        return read_rest_of_line(stream) ? P_LINE_TOO_LONG : P_IO;
     }
 
     curr = strtok_ws(line);
