@@ -20,4 +20,10 @@ void* checked_malloc(size_t size);
  */
 void* checked_calloc(size_t count, size_t size);
 
+/**
+ * Resize the specified memory area to `new_size`, terminating the process on
+ * failure.
+ */
+void* checked_realloc(void* ptr, size_t new_size);
+
 #endif

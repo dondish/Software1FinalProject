@@ -26,3 +26,11 @@ void* checked_calloc(size_t count, size_t size) {
     }
     return ptr;
 }
+
+void* checked_realloc(void* ptr, size_t new_size) {
+    void* new_ptr = realloc(ptr, new_size);
+    if (!ptr) {
+        handle_alloc_error();
+    }
+    return new_ptr;
+}
