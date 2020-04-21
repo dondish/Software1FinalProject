@@ -12,20 +12,23 @@ void list_init(list_t* list) {
 }
 
 void list_destroy(list_t* list, list_item_dtor_t dtor) {
-    list_destroy_tail(list->head, dtor);
+    list_destroy_tail(list, list->head, dtor);
 
     /* Fail fast if we accidentally attempt to use the list later. */
     memset(list, 0, sizeof(list_t));
 }
 
-void list_destroy_tail(list_node_t* node, list_item_dtor_t dtor) {
+void list_destroy_tail(list_t* list, list_node_t* node, list_item_dtor_t dtor) {
+    list_node_t** prev_ptr;
+
     if (!node) {
         return;
     }
 
-    if (node->prev) {
-        node->prev->next = NULL;
-    }
+    list->tail = node->prev;
+
+    prev_ptr = node->prev ? &node->prev->next : &list->head;
+    *prev_ptr = NULL;
 
     while (node) {
         list_node_t* next = node->next;
