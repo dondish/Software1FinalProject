@@ -30,6 +30,13 @@ void list_init(list_t* list);
 void list_destroy(list_t* list, list_item_dtor_t dtor);
 
 /**
+ * Disconnect and destroy the list tail headed by `node`, calling
+ * the destructor on each item.
+ * Note: this is a no-op if `node` is null.
+ */
+void list_destroy_tail(list_node_t* node, list_item_dtor_t dtor);
+
+/**
  * Check whether `list` is empty.
  */
 bool_t list_is_empty(const list_t* list);

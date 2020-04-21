@@ -12,17 +12,27 @@ void list_init(list_t* list) {
 }
 
 void list_destroy(list_t* list, list_item_dtor_t dtor) {
-    list_node_t* iter = list->head;
-
-    while (iter) {
-        list_node_t* next = iter->next;
-        dtor(iter->value);
-        free(iter);
-        iter = next;
-    }
+    list_destroy_tail(list->head, dtor);
 
     /* Fail fast if we accidentally attempt to use the list later. */
     memset(list, 0, sizeof(list_t));
+}
+
+void list_destroy_tail(list_node_t* node, list_item_dtor_t dtor) {
+    if (!node) {
+        return;
+    }
+
+    if (node->prev) {
+        node->prev->next = NULL;
+    }
+
+    while (node) {
+        list_node_t* next = node->next;
+        dtor(node->value);
+        free(node);
+        node = next;
+    }
 }
 
 bool_t list_is_empty(const list_t* list) { return !list->head; }
