@@ -462,6 +462,295 @@ static void test_parsing_generate() {
     fclose(stream);
 }
 
+static void test_parsing_undo() {
+    const char undo[] = "undo";
+    FILE *stream; 
+    command_t cmd;
+
+    stream = fill_stream(undo);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_UNDO);
+    fclose(stream);
+
+    stream = fill_stream(undo);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
+    assert(cmd.type == CT_UNDO);
+    fclose(stream);
+
+    stream = fill_stream(undo);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_UNDO);
+    fclose(stream);
+}
+
+static void test_parsing_redo() {
+    const char redo[] = "redo";
+    FILE *stream; 
+    command_t cmd;
+
+    stream = fill_stream(redo);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_REDO);
+    fclose(stream);
+
+    stream = fill_stream(redo);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
+    assert(cmd.type == CT_REDO);
+    fclose(stream);
+
+    stream = fill_stream(redo);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_REDO);
+    fclose(stream);
+}
+
+static void test_parsing_save() {
+    const char save[] = "save";
+    const char save_arg[] = "save hi";
+    FILE *stream; 
+    command_t cmd;
+
+    stream = fill_stream(save);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_SAVE);
+    fclose(stream);
+
+    stream = fill_stream(save);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_SAVE);
+    fclose(stream);
+
+    stream = fill_stream(save);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_SAVE);
+    fclose(stream);
+
+    stream = fill_stream(save_arg);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_SAVE);
+    fclose(stream);
+
+    stream = fill_stream(save_arg);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
+    assert(cmd.type == CT_SAVE);
+    assert(!strcmp(cmd.arg.str_val, "hi"));
+    fclose(stream);
+
+    stream = fill_stream(save_arg);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_SAVE);
+    assert(!strcmp(cmd.arg.str_val, "hi"));
+    fclose(stream);
+}
+
+static void test_parsing_hint() {
+    const char hint[] = "hint";
+    const char hint_arg_wrong[] = "hint x";
+    const char hint_arg[] = "hint 1";
+    const char hint_two_arg_wrong[] = "hint 1 x";
+    const char hint_two_arg[] = "hint 1 2";
+    FILE *stream;
+    command_t cmd;
+
+    stream = fill_stream(hint);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint_arg_wrong);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint_arg_wrong);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint_arg);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint_arg);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint_two_arg_wrong);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint_two_arg_wrong);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_ARGUMENTS);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint_two_arg);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_HINT);
+    fclose(stream);
+
+    stream = fill_stream(hint_two_arg);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_HINT);
+    assert(cmd.arg.two_int_val.i == 1);
+    assert(cmd.arg.two_int_val.j == 2);
+    fclose(stream);
+}
+
+static void test_parsing_guess_hint() {
+    const char guess_hint[] = "guess_hint";
+    const char guess_hint_arg_wrong[] = "guess_hint x";
+    const char guess_hint_arg[] = "guess_hint 1";
+    const char guess_hint_two_arg_wrong[] = "guess_hint 1 x";
+    const char guess_hint_two_arg[] = "guess_hint 1 2";
+    FILE *stream;
+    command_t cmd;
+
+    stream = fill_stream(guess_hint);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint_arg_wrong);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint_arg_wrong);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint_arg);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint_arg);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_NUM_OF_ARGS);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint_two_arg_wrong);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint_two_arg_wrong);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_INVALID_ARGUMENTS);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint_two_arg);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_GUESS_HINT);
+    fclose(stream);
+
+    stream = fill_stream(guess_hint_two_arg);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_GUESS_HINT);
+    assert(cmd.arg.two_int_val.i == 1);
+    assert(cmd.arg.two_int_val.j == 2);
+    fclose(stream);
+}
+
+static void test_parsing_num_solutions() {
+    const char num_solutions[] = "num_solutions";
+    FILE *stream; 
+    command_t cmd;
+
+    stream = fill_stream(num_solutions);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_NUM_SOLUTIONS);
+    fclose(stream);
+
+    stream = fill_stream(num_solutions);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
+    assert(cmd.type == CT_NUM_SOLUTIONS);
+    fclose(stream);
+
+    stream = fill_stream(num_solutions);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_NUM_SOLUTIONS);
+    fclose(stream);
+}
+
+static void test_parsing_autofill() {
+    const char autofill[] = "autofill";
+    FILE *stream; 
+    command_t cmd;
+
+    stream = fill_stream(autofill);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_AUTOFILL);
+    fclose(stream);
+
+    stream = fill_stream(autofill);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_AUTOFILL);
+    fclose(stream);
+
+    stream = fill_stream(autofill);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_AUTOFILL);
+    fclose(stream);
+}
+
+static void test_parsing_reset() {
+    const char reset[] = "reset";
+    FILE *stream; 
+    command_t cmd;
+
+    stream = fill_stream(reset);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_INVALID_MODE);
+    assert(cmd.type == CT_RESET);
+    fclose(stream);
+
+    stream = fill_stream(reset);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
+    assert(cmd.type == CT_RESET);
+    fclose(stream);
+
+    stream = fill_stream(reset);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_RESET);
+    fclose(stream);
+}
+
+static void test_parsing_exit() {
+    const char exit[] = "exit";
+    FILE *stream; 
+    command_t cmd;
+
+    stream = fill_stream(exit);
+    assert(parse_line(stream, &cmd, GM_INIT) == P_SUCCESS);
+    assert(cmd.type == CT_EXIT);
+    fclose(stream);
+
+    stream = fill_stream(exit);
+    assert(parse_line(stream, &cmd, GM_EDIT) == P_SUCCESS);
+    assert(cmd.type == CT_EXIT);
+    fclose(stream);
+
+    stream = fill_stream(exit);
+    assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
+    assert(cmd.type == CT_EXIT);
+    fclose(stream);
+}
+
 int main() {
     test_parse_line_too_long();
     test_ignore_blank_line();
@@ -475,5 +764,14 @@ int main() {
     test_parsing_validate();
     test_parsing_guess();
     test_parsing_generate();
+    test_parsing_undo();
+    test_parsing_redo();
+    test_parsing_save();
+    test_parsing_hint();
+    test_parsing_guess_hint();
+    test_parsing_num_solutions();
+    test_parsing_autofill();
+    test_parsing_reset();
+    test_parsing_exit();
     return 0;
 }
