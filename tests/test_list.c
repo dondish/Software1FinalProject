@@ -86,11 +86,35 @@ void test_list_is_empty() {
     assert(list_is_empty(&list));
 }
 
+void test_list_pop() {
+    int xers[10];
+    list_t list;
+    int i;
+
+    list_init(&list);
+
+    for (i = 0; i < 10; i++) {
+        xers[i] = i;
+        list_push(&list, &xers[i]);
+    }
+
+    assert(*(int*)list.head->value == 0);
+    assert(*(int*)list.tail->value == 9);
+
+    i = 9;
+    while (list.tail != NULL) {
+        assert(*(int*)list.tail->value == i);
+        list_pop(&list);
+        i--;
+    }
+}
+
 int main() {
     test_list_init();
     test_list_destroy();
     test_list_push();
     test_list_destroy_tail();
     test_list_is_empty();
+    test_list_pop();
     return 0;
 }
