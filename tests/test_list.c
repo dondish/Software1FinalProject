@@ -50,9 +50,35 @@ void test_list_push() {
     }
 }
 
+void test_list_destroy_tail() {
+    int xers[10];
+    list_t list;
+    list_node_t* item;
+    int i;
+
+    list_init(&list);
+
+    for (i = 0; i < 10; i++) {
+        xers[i] = i;
+        list_push(&list, &xers[i]);
+    }
+
+    assert(*(int*)list.head->value == 0);
+    assert(*(int*)list.tail->value == 9);
+
+    item = list.head;
+    for (i = 0; i < 5; i++) {
+        item = item->next;
+    }
+    assert(*(int*)item->value == 5);
+    list_destroy_tail(&list, item, &dtor);
+    assert(*(int*)list.tail->value == 4);
+}
+
 int main() {
     test_list_init();
     test_list_destroy();
     test_list_push();
+    test_list_destroy_tail();
     return 0;
 }
