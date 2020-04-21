@@ -80,16 +80,19 @@ void history_destroy(history_t* history) {
 }
 
 void history_add_item(history_t* history, delta_list_t* item) {
+    list_node_t* redo_start;
+
     delta_list_t* temp = checked_malloc(sizeof(delta_list_t));
     memcpy(temp, item, sizeof(delta_list_t));
 
     /* Fail fast if we attempt to reuse `item` */
     memset(item, 0, sizeof(delta_list_t));
 
-    list_destroy_tail(&history->list, history->current->next,
-                      delta_list_destroy_and_free);
+    redo_start = history->current ? history->current->next : history->list.head;
+    list_destroy_tail(&history->list, redo_start, delta_list_destroy_and_free);
 
     list_push(&history->list, temp);
+    history->current = history->list.tail;
 }
 
 const delta_list_t* history_undo(history_t* history) {
