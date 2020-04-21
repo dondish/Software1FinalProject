@@ -12,6 +12,9 @@ struct list_node {
     void* value;
 };
 
+/**
+ * Doubly-linked list.
+ */
 typedef struct list {
     list_node_t* head;
     list_node_t* tail;
@@ -28,6 +31,13 @@ void list_init(list_t* list);
  * Deallocate all items in `list`, invoking `dtor` on each value first.
  */
 void list_destroy(list_t* list, list_item_dtor_t dtor);
+
+/**
+ * Disconnect and destroy the list tail headed by `node` from `list`, calling
+ * the destructor on each item.
+ * Note: this is a no-op if `node` is null.
+ */
+void list_destroy_tail(list_t* list, list_node_t* node, list_item_dtor_t dtor);
 
 /**
  * Check whether `list` is empty.
