@@ -75,10 +75,22 @@ void test_list_destroy_tail() {
     assert(*(int*)list.tail->value == 4);
 }
 
+void test_list_is_empty() {
+    int zero = 0;
+    list_t list;
+    list_init(&list);
+    assert(list_is_empty(&list));
+    list_push(&list, &zero);
+    assert(!list_is_empty(&list));
+    list_destroy(&list, &dtor);
+    assert(list_is_empty(&list));
+}
+
 int main() {
     test_list_init();
     test_list_destroy();
     test_list_push();
     test_list_destroy_tail();
+    test_list_is_empty();
     return 0;
 }
