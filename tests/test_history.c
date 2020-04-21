@@ -108,14 +108,8 @@ static void test_history_add_item(void) {
 
 static void test_history_undo_redo(void) {
     history_t history;
-    board_t board;
     delta_list_t delta;
     const delta_list_t* delta_ptr;
-
-    board_init(&board, 6, 6);
-    board_access(&board, 2, 3)->value = 7;
-    board_access(&board, 0, 0)->value = 5;
-    board_access(&board, 5, 5)->value = 8;
 
     history_init(&history);
 
@@ -186,6 +180,40 @@ static void test_history_undo_redo(void) {
     delta_ptr = history_redo(&history);
 
     assert(delta_ptr == NULL);
+
+    delta_ptr = history_undo(&history);
+
+    delta_list_init(&delta);
+    delta_list_add(&delta, 2, 4, 4, 6);
+    delta_list_add(&delta, 5, 1, 9, 6);
+    delta_list_add(&delta, 0, 0, 4, 6);
+    history_add_item(&history, &delta);
+
+    delta_ptr = history.current->value;
+
+    assert(delta_ptr->deltas[0].row == 2);
+    assert(delta_ptr->deltas[0].col == 4);
+    assert(delta_ptr->deltas[0].diff == 2);
+    assert(delta_ptr->deltas[1].row == 5);
+    assert(delta_ptr->deltas[1].col == 1);
+    assert(delta_ptr->deltas[1].diff == -3);
+    assert(delta_ptr->deltas[2].row == 0);
+    assert(delta_ptr->deltas[2].col == 0);
+    assert(delta_ptr->deltas[2].diff == 2);
+
+    assert(history.current->next == NULL);
+
+    delta_ptr = history.current->prev->value;
+
+    assert(delta_ptr->deltas[0].row == 2);
+    assert(delta_ptr->deltas[0].col == 3);
+    assert(delta_ptr->deltas[0].diff == -4);
+    assert(delta_ptr->deltas[1].row == 0);
+    assert(delta_ptr->deltas[1].col == 0);
+    assert(delta_ptr->deltas[1].diff == 4);
+    assert(delta_ptr->deltas[2].row == 5);
+    assert(delta_ptr->deltas[2].col == 5);
+    assert(delta_ptr->deltas[2].diff == -8);
 }
 
 int main() {
