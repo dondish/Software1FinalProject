@@ -14,7 +14,7 @@ static FILE* fill_stream(const char* contents) {
     return stream;
 }
 
-static void test_parse_line_too_long() {
+static void test_parse_line_too_long(void) {
     const char shrekd[] = "Somebody once told me"
                           "The world is gonna roll me"
                           "I ain't the sharpest tool in the shed"
@@ -83,7 +83,7 @@ static void test_parse_line_too_long() {
     fclose(stream);
 }
 
-static void test_ignore_blank_line() {
+static void test_ignore_blank_line(void) {
     const char empty[] = "\n";
     const char whitespaced[] = "     ";
     command_t cmd;
@@ -98,14 +98,14 @@ static void test_ignore_blank_line() {
     fclose(stream);
 }
 
-static void test_eof_exit() {
+static void test_eof_exit(void) {
     command_t command;
     FILE* stream = fill_stream("");
     assert(parse_line(stream, &command, GM_INIT) == P_SUCCESS);
     assert(command.type == CT_EXIT);
 }
 
-static void test_too_many_args() {
+static void test_too_many_args(void) {
     const char solve[] = "solve 1 2";
     const char edit[] = "edit 1 2";
     const char mark_errors[] = "mark_errors 1 2";
@@ -150,7 +150,7 @@ static void test_too_many_args() {
     fclose(stream);
 }
 
-static void test_parsing_solve() {
+static void test_parsing_solve(void) {
     const char only_solve[] = "solve";
     const char solve_correct[] = "solve idk";
     FILE* stream;
@@ -168,7 +168,7 @@ static void test_parsing_solve() {
     fclose(stream);
 }
 
-static void test_parsing_edit() {
+static void test_parsing_edit(void) {
     const char only_edit[] = "edit";
     const char edit_plus_arg[] = "edit idk";
     FILE* stream;
@@ -187,7 +187,7 @@ static void test_parsing_edit() {
     fclose(stream);
 }
 
-static void test_parsing_mark_errors() {
+static void test_parsing_mark_errors(void) {
     const char only_mark_errors[] = "mark_errors";
     const char nonbool_mark_errors[] = "mark_errors 2";
     const char nonbool_mark_errors2[] = "mark_errors -1";
@@ -233,7 +233,7 @@ static void test_parsing_mark_errors() {
     fclose(stream);
 }
 
-static void test_parsing_print_board() {
+static void test_parsing_print_board(void) {
     const char text[] = "print_board";
     FILE* stream;
     command_t cmd;
@@ -254,7 +254,7 @@ static void test_parsing_print_board() {
     fclose(stream);
 }
 
-static void test_parsing_set() {
+static void test_parsing_set(void) {
     const char only_set[] = "set";
     const char set_one_arg[] = "set 1";
     const char set_one_wrong_arg[] = "set x";
@@ -317,7 +317,7 @@ static void test_parsing_set() {
     fclose(stream);
 }
 
-static void test_parsing_validate() {
+static void test_parsing_validate(void) {
     const char validate[] = "validate";
     FILE* stream;
     command_t cmd;
@@ -338,7 +338,7 @@ static void test_parsing_validate() {
     fclose(stream);
 }
 
-static void test_parsing_guess() {
+static void test_parsing_guess(void) {
     const char only_guess[] = "guess";
     const char one_arg_guess[] = "guess 1";
     const char one_arg_guess_float[] = "guess 0.5";
@@ -384,7 +384,7 @@ static void test_parsing_guess() {
     fclose(stream);
 }
 
-static void test_parsing_generate() {
+static void test_parsing_generate(void) {
     const char only_generate[] = "generate";
     const char one_arg_generate[] = "generate 1";
     const char one_wrong_arg_generate[] = "generate -1";
@@ -462,9 +462,9 @@ static void test_parsing_generate() {
     fclose(stream);
 }
 
-static void test_parsing_undo() {
+static void test_parsing_undo(void) {
     const char undo[] = "undo";
-    FILE *stream; 
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(undo);
@@ -483,9 +483,9 @@ static void test_parsing_undo() {
     fclose(stream);
 }
 
-static void test_parsing_redo() {
+static void test_parsing_redo(void) {
     const char redo[] = "redo";
-    FILE *stream; 
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(redo);
@@ -504,10 +504,10 @@ static void test_parsing_redo() {
     fclose(stream);
 }
 
-static void test_parsing_save() {
+static void test_parsing_save(void) {
     const char save[] = "save";
     const char save_arg[] = "save hi";
-    FILE *stream; 
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(save);
@@ -543,13 +543,13 @@ static void test_parsing_save() {
     fclose(stream);
 }
 
-static void test_parsing_hint() {
+static void test_parsing_hint(void) {
     const char hint[] = "hint";
     const char hint_arg_wrong[] = "hint x";
     const char hint_arg[] = "hint 1";
     const char hint_two_arg_wrong[] = "hint 1 x";
     const char hint_two_arg[] = "hint 1 2";
-    FILE *stream;
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(hint);
@@ -605,13 +605,13 @@ static void test_parsing_hint() {
     fclose(stream);
 }
 
-static void test_parsing_guess_hint() {
+static void test_parsing_guess_hint(void) {
     const char guess_hint[] = "guess_hint";
     const char guess_hint_arg_wrong[] = "guess_hint x";
     const char guess_hint_arg[] = "guess_hint 1";
     const char guess_hint_two_arg_wrong[] = "guess_hint 1 x";
     const char guess_hint_two_arg[] = "guess_hint 1 2";
-    FILE *stream;
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(guess_hint);
@@ -667,9 +667,9 @@ static void test_parsing_guess_hint() {
     fclose(stream);
 }
 
-static void test_parsing_num_solutions() {
+static void test_parsing_num_solutions(void) {
     const char num_solutions[] = "num_solutions";
-    FILE *stream; 
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(num_solutions);
@@ -688,9 +688,9 @@ static void test_parsing_num_solutions() {
     fclose(stream);
 }
 
-static void test_parsing_autofill() {
+static void test_parsing_autofill(void) {
     const char autofill[] = "autofill";
-    FILE *stream; 
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(autofill);
@@ -709,9 +709,9 @@ static void test_parsing_autofill() {
     fclose(stream);
 }
 
-static void test_parsing_reset() {
+static void test_parsing_reset(void) {
     const char reset[] = "reset";
-    FILE *stream; 
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(reset);
@@ -730,9 +730,9 @@ static void test_parsing_reset() {
     fclose(stream);
 }
 
-static void test_parsing_exit() {
+static void test_parsing_exit(void) {
     const char exit[] = "exit";
-    FILE *stream; 
+    FILE* stream;
     command_t cmd;
 
     stream = fill_stream(exit);

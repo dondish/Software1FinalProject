@@ -1,7 +1,6 @@
 #include "list.h"
 
 #include <assert.h>
-#include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,7 +14,7 @@ void test_list_init() {
 
 static void dtor(void* value) { (void)value; }
 
-void test_list_destroy() {
+void test_list_destroy(void) {
     list_t list;
     int zero = 0;
     list_init(&list);
@@ -25,7 +24,7 @@ void test_list_destroy() {
     assert(list.tail == NULL);
 }
 
-void test_list_push() {
+void test_list_push(void) {
     int xers[10];
     list_t list;
     list_node_t* item;
@@ -50,7 +49,7 @@ void test_list_push() {
     }
 }
 
-void test_list_destroy_tail() {
+void test_list_destroy_tail(void) {
     int xers[10];
     list_t list;
     list_node_t* item;
@@ -75,7 +74,7 @@ void test_list_destroy_tail() {
     assert(*(int*)list.tail->value == 4);
 }
 
-void test_list_is_empty() {
+void test_list_is_empty(void) {
     int zero = 0;
     list_t list;
     list_init(&list);
@@ -86,7 +85,7 @@ void test_list_is_empty() {
     assert(list_is_empty(&list));
 }
 
-void test_list_pop() {
+void test_list_pop(void) {
     int xers[10];
     list_t list;
     int i;
