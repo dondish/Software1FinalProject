@@ -7,12 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct delta {
-    int row;
-    int col;
-    int diff;
-};
-
 static void increase_memory(delta_list_t* list) {
     list->capacity *= 2;
     list->deltas =

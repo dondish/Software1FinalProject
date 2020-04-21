@@ -5,10 +5,14 @@
 #include "list.h"
 
 /**
- * Opaque internal type representing a board delta. Users interact with
+ * Internal type representing a board delta. Users should interact with
  * `delta_list_t` and not with `delta_t` directly.
  */
-typedef struct delta delta_t;
+typedef struct delta {
+    int row;
+    int col;
+    int diff;
+} delta_t;
 
 /**
  * A list of simultaneous board changes. Represented in-memory as a dynamic
