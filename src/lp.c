@@ -6,6 +6,7 @@
 #include <gurobi_c.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 bool_t lp_env_init(lp_env_t* env) {
     GRBenv* grb_env = NULL;
@@ -278,8 +279,8 @@ static lp_status_t add_vars(GRBmodel* model, int count, char var_type) {
 /**
  * Callback invoked with nonzero LP values on success.
  */
-typedef void (*lp_val_callback_t)(int row, int col, int cell_val,
-                                  double var_val, void* ctx);
+typedef void (*lp_val_callback_t)(int block_size, int row, int col, int val,
+                                  double score, void* ctx);
 
 /**
  * Create a new sudoku model in the specified environment.
@@ -298,7 +299,7 @@ static lp_status_t report_var_values(GRBmodel* model, int block_size,
     lp_status_t ret = LP_SUCCESS;
 
     double* var_values = checked_calloc(var_count, sizeof(double));
-    int row, col, cell_val;
+    int row, col, val;
 
     if (GRBgetdblattrarray(model, GRB_DBL_ATTR_X, 0, var_count, var_values)) {
         ret = LP_GUROBI_ERR;
@@ -307,12 +308,12 @@ static lp_status_t report_var_values(GRBmodel* model, int block_size,
 
     for (row = 0; row < block_size; row++) {
         for (col = 0; col < block_size; col++) {
-            for (cell_val = 1; cell_val <= block_size; cell_val++) {
+            for (val = 1; val <= block_size; val++) {
                 int var_idx =
-                    *var_map_access(var_map, block_size, row, col, cell_val);
-                double var_val = var_values[var_idx];
-                if (var_idx != -1 && var_val > 0.0) {
-                    callback(row, col, cell_val, var_val, callback_ctx);
+                    *var_map_access(var_map, block_size, row, col, val);
+                double score = var_values[var_idx];
+                if (var_idx != -1 && score > 0.0) {
+                    callback(block_size, row, col, val, score, callback_ctx);
                 }
             }
         }
@@ -383,17 +384,65 @@ cleanup:
     return ret;
 }
 
+/* ILP */
+
 /**
  * Value callback used when solving ILP.
  */
-static void ilp_val_callback(int row, int col, int cell_val, double var_val,
-                             void* ctx) {
+static void ilp_val_callback(int block_size, int row, int col, int val,
+                             double score, void* ctx) {
     board_t* board = ctx;
 
-    (void)var_val;
-    board_access(board, row, col)->value = cell_val;
+    (void)block_size;
+    (void)score;
+    board_access(board, row, col)->value = val;
 }
 
 lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
     return lp_solve(env, board, GRB_BINARY, ilp_val_callback, board);
+}
+
+/* Continuous LP */
+
+void lp_cell_candidates_destroy(lp_cell_candidates_t* candidates) {
+    free(candidates->candidates);
+    memset(candidates, 0, sizeof(lp_cell_candidates_t));
+}
+
+static void candidates_realloc_grow(lp_cell_candidates_t* candidates) {
+    candidates->capacity = candidates->capacity * 2 + 1;
+    candidates->candidates =
+        checked_realloc(candidates->candidates, candidates->capacity);
+}
+
+/**
+ * Append the specified scored value to the candidate list.
+ */
+static void candidates_add(lp_cell_candidates_t* candidates, int val,
+                           int score) {
+    if (candidates->size == candidates->capacity) {
+        candidates_realloc_grow(candidates);
+    }
+
+    candidates->candidates[candidates->size].val = val;
+    candidates->candidates[candidates->size].score = score;
+
+    candidates->size++;
+}
+
+static void continuous_val_callback(int block_size, int row, int col, int val,
+                                    double score, void* ctx) {
+    lp_cell_candidates_t* candidate_board = ctx;
+    candidates_add(&candidate_board[row * block_size + col], val, score);
+}
+
+lp_status_t lp_solve_continuous(lp_env_t env, board_t* board,
+                                lp_cell_candidates_t* candidate_board) {
+    int block_size = board_block_size(board);
+
+    memset(candidate_board, 0,
+           sizeof(lp_cell_candidates_t) * block_size * block_size);
+
+    return lp_solve(env, board, GRB_CONTINUOUS, continuous_val_callback,
+                    candidate_board);
 }

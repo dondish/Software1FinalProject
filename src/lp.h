@@ -61,16 +61,14 @@ void lp_cell_candidates_destroy(lp_cell_candidates_t* candidates);
 
 /**
  * Use continuous LP to search for solutions to `board`, storing scored
- * candidates in `candidates`. The size of `candidates` should be that of the
- * board.
- * The candidate values returned for each cell will be sorted in order of
- * increasing score.
+ * candidates in `candidate_board`. The size of `candidate_board` should be that
+ * of the board.
  *
  * Note: this function does not check the legality of the board, meaning that
  * the it may still report success when called on an erroneous board (when it
  * has no conflicting cells to fill in itself).
  */
 lp_status_t lp_solve_continuous(lp_env_t env, board_t* board,
-                                lp_cell_candidates_t* candidates);
+                                lp_cell_candidates_t* candidate_board);
 
 #endif
