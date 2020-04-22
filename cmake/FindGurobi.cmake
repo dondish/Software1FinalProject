@@ -10,3 +10,7 @@ find_library(GUROBI_LIBRARY
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GUROBI DEFAULT_MSG GUROBI_LIBRARY)
+
+add_library(Gurobi::Gurobi INTERFACE IMPORTED)
+target_include_directories(Gurobi::Gurobi INTERFACE ${GUROBI_INCLUDE_DIRS})
+target_link_libraries(Gurobi::Gurobi INTERFACE ${GUROBI_LIBRARY})
