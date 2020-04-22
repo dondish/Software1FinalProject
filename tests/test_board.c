@@ -6,6 +6,14 @@
 #include <stdio.h>
 #include <string.h>
 
+static void test_board_block_pos(void) {
+    board_t board;
+    board_init(&board, 2, 5);
+
+    assert(board_block_row(&board, 1, 0) == 2);
+    assert(board_block_col(&board, 1, 2) == 7);
+}
+
 static void test_board_access(void) {
     board_t board;
 
@@ -15,12 +23,6 @@ static void test_board_access(void) {
     assert(board.cells[13].value == 0);
     board_access(&board, 1, 3)->value = 17;
     assert(board.cells[13].value == 17);
-
-    board.cells[27].value = 23;
-    assert(board_access_block(&board, 1, 1, 0, 2)->value == 23);
-
-    board.cells[73].value = 33;
-    assert(board_access_block(&board, 3, 0, 1, 3)->value == 33);
 }
 
 static void check_contents(FILE* stream, const char* expected) {
@@ -357,6 +359,7 @@ static void test_board_check_legal(void) {
 }
 
 int main() {
+    test_board_block_pos();
     test_board_access();
     test_board_print();
     test_board_serialize();

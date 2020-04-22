@@ -74,21 +74,22 @@ void board_clone(board_t* dest, const board_t* src);
 int board_block_size(const board_t* board);
 
 /**
+ * Compute the row in which the cell at the specified position within the
+ * specified block resides.
+ */
+int board_block_row(board_t* board, int block_row, int local_row);
+
+/**
+ * Compute the column in which the cell at the specified position within the
+ * specified block resides.
+ */
+int board_block_col(board_t* board, int block_col, int local_col);
+
+/**
  * Retrieve the cell at the specified row and column on the board.
  */
 cell_t* board_access(board_t* board, int row, int col);
 const cell_t* board_access_const(const board_t* board, int row, int col);
-
-/**
- * Retrieve the cell at the specified position within the specified block on the
- * board.
- */
-cell_t* board_access_block(board_t* board, int block_row, int block_col,
-                           int local_row, int local_col);
-
-const cell_t* board_access_block_const(const board_t* board, int block_row,
-                                       int block_col, int local_row,
-                                       int local_col);
 
 /**
  * Check whether `board` is legal (in the sense that no two "neighbors" share

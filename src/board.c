@@ -31,25 +31,20 @@ void board_clone(board_t* dest, const board_t* src) {
 
 int board_block_size(const board_t* board) { return board->m * board->n; }
 
+int board_block_row(board_t* board, int block_row, int local_row) {
+    return block_row * board->m + local_row;
+}
+
+int board_block_col(board_t* board, int block_col, int local_col) {
+    return block_col * board->n + local_col;
+}
+
 cell_t* board_access(board_t* board, int row, int col) {
     return &board->cells[row * board_block_size(board) + col];
 }
 
 const cell_t* board_access_const(const board_t* board, int row, int col) {
     return board_access((board_t*)board, row, col);
-}
-
-cell_t* board_access_block(board_t* board, int block_row, int block_col,
-                           int local_row, int local_col) {
-    return board_access(board, block_row * board->m + local_row,
-                        block_col * board->n + local_col);
-}
-
-const cell_t* board_access_block_const(const board_t* board, int block_row,
-                                       int block_col, int local_row,
-                                       int local_col) {
-    return board_access_block((board_t*)board, block_row, block_col, local_row,
-                              local_col);
 }
 
 /* LEGALITY CHECKS/ERROR MARKING */
@@ -148,8 +143,8 @@ static cell_t* retrieve_by_block(board_t* board, int ctx, int local_off) {
     int local_row = local_off / board->n;
     int local_col = local_off % board->n;
 
-    return board_access_block(board, block_row, block_col, local_row,
-                              local_col);
+    return board_access(board, board_block_row(board, block_row, local_row),
+                        board_block_col(board, block_col, local_col));
 }
 
 /**
