@@ -7,10 +7,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-static bool_t create_model(lp_env_t env, GRBmodel** model) {
-    return !GRBnewmodel(env, model, "sudoku", 0, NULL, NULL, NULL, NULL, NULL);
-}
-
 bool_t lp_env_init(lp_env_t* env) {
     GRBenv* grb_env = NULL;
     int err = GRBloadenv(&grb_env, NULL);
@@ -23,18 +19,23 @@ bool_t lp_env_init(lp_env_t* env) {
 
 void lp_env_destroy(lp_env_t env) { GRBfreeenv((GRBenv*)env); }
 
-static void clear_var_map(int* var_map, int block_size) {
-    int i;
-    for (i = 0; i < block_size * block_size * block_size; i++) {
-        var_map[i] = -1;
-    }
-}
-
+/**
+ * Access the specified part of the variable map, based on row, column and
+ * (1-based) cell value. The variable map is used to track the relationship
+ * between board cells (and their values) and Gurobi variables.
+ */
 static int* var_map_access(int* var_map, int block_size, int row, int col,
                            int val) {
     return &var_map[block_size * (block_size * row + col) + val - 1];
 }
 
+/**
+ * Gather all possible legal values for the specified position on the board,
+ * storing them to `candidates`, and return the number of candidates found.
+ *
+ * Note: the specified cell's contents will be overriden, and it will be emptied
+ * when the function returns.
+ */
 static int gather_candidates(board_t* board, int row, int col,
                              int* candidates) {
     cell_t* cell = board_access(board, row, col);
@@ -55,6 +56,21 @@ static int gather_candidates(board_t* board, int row, int col,
     return candidate_count;
 }
 
+/**
+ * Set all entries of the specified variable map to -1, indicating no variable.
+ */
+static void clear_var_map(int* var_map, int block_size) {
+    int i;
+    for (i = 0; i < block_size * block_size * block_size; i++) {
+        var_map[i] = -1;
+    }
+}
+
+/**
+ * Populate the variable map based on the specified board. Every entry of the
+ * map will contain an index, or -1 if no variable is to be associated with the
+ * corresponding cell value.
+ */
 static int compute_var_map(int* var_map, board_t* board) {
     int block_size = board_block_size(board);
     int row, col;
@@ -192,6 +208,10 @@ static void fill_coeffs(double* coeffs, int block_size) {
     }
 }
 
+/**
+ * Add constraints guaranteeing board validity to `model`, based on `board` and
+ * the pre-computed `var_map`.
+ */
 static lp_status_t add_board_constraints(GRBmodel* model, const board_t* board,
                                          int* var_map) {
     lp_status_t ret = LP_SUCCESS;
@@ -230,14 +250,86 @@ cleanup:
     return ret;
 }
 
-lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
+/**
+ * Add `count` variables of the specified type to `model`, constraining them to
+ * `[0, 1]`.
+ */
+static lp_status_t add_vars(GRBmodel* model, int count, char var_type) {
+    int i;
+    for (i = 0; i < count; i++) {
+        if (GRBaddvar(model, 0, NULL, NULL, 0.0, 0.0, 1.0, var_type, NULL)) {
+            return LP_GUROBI_ERR;
+        }
+    }
+
+    if (GRBupdatemodel(model)) {
+        return LP_GUROBI_ERR;
+    }
+
+    return LP_SUCCESS;
+}
+
+/**
+ * Callback invoked with nonzero LP values on success.
+ */
+typedef void (*lp_val_callback_t)(int row, int col, int cell_val,
+                                  double var_val, void* ctx);
+
+/**
+ * Create a new sudoku model in the specified environment.
+ */
+static bool_t create_model(lp_env_t env, GRBmodel** model) {
+    return !GRBnewmodel(env, model, "sudoku", 0, NULL, NULL, NULL, NULL, NULL);
+}
+
+/**
+ * Report nonzero variable values from `model` to `callback`.
+ */
+static lp_status_t report_var_values(GRBmodel* model, int block_size,
+                                     int* var_map, int var_count,
+                                     lp_val_callback_t callback,
+                                     void* callback_ctx) {
+    lp_status_t ret = LP_SUCCESS;
+
+    double* var_values = checked_calloc(var_count, sizeof(double));
+    int row, col, cell_val;
+
+    if (GRBgetdblattrarray(model, GRB_DBL_ATTR_X, 0, var_count, var_values)) {
+        ret = LP_GUROBI_ERR;
+        goto cleanup;
+    }
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            for (cell_val = 1; cell_val <= block_size; cell_val++) {
+                int var_idx =
+                    *var_map_access(var_map, block_size, row, col, cell_val);
+                double var_val = var_values[var_idx];
+                if (var_idx != -1 && var_val > 0.0) {
+                    callback(row, col, cell_val, var_val, callback_ctx);
+                }
+            }
+        }
+    }
+
+cleanup:
+    free(var_values);
+    return ret;
+}
+
+/**
+ * Solve `board` using LP with the specified variable types, reporting
+ * values to `callback` on success.
+ */
+static lp_status_t lp_solve(lp_env_t env, board_t* board, char var_type,
+                            lp_val_callback_t callback, void* callback_ctx) {
     lp_status_t ret = LP_SUCCESS;
 
     int block_size = board_block_size(board);
 
     GRBmodel* model = NULL;
-    int var_count, var_idx;
     int* var_map;
+    int var_count;
 
     int optim_status;
 
@@ -249,15 +341,8 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
         checked_malloc(block_size * block_size * block_size * sizeof(int));
     var_count = compute_var_map(var_map, board);
 
-    for (var_idx = 0; var_idx < var_count; var_idx++) {
-        if (GRBaddvar(model, 0, NULL, NULL, 0.0, 0.0, 1.0, GRB_BINARY, NULL)) {
-            ret = LP_GUROBI_ERR;
-            goto cleanup;
-        }
-    }
-
-    if (GRBupdatemodel(model)) {
-        ret = LP_GUROBI_ERR;
+    ret = add_vars(model, var_count, var_type);
+    if (ret != LP_SUCCESS) {
         goto cleanup;
     }
 
@@ -277,27 +362,8 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
     }
 
     if (optim_status == GRB_OPTIMAL) {
-        double* var_values = checked_calloc(var_count, sizeof(double));
-        int row, col, val;
-
-        if (GRBgetdblattrarray(model, GRB_DBL_ATTR_X, 0, var_count,
-                               var_values)) {
-            ret = LP_GUROBI_ERR;
-            goto cleanup;
-        }
-
-        for (row = 0; row < block_size; row++) {
-            for (col = 0; col < block_size; col++) {
-                for (val = 1; val <= block_size; val++) {
-                    int var_idx =
-                        *var_map_access(var_map, block_size, row, col, val);
-                    if (var_idx != -1 && var_values[var_idx] > 0.0) {
-                        board_access(board, row, col)->value = val;
-                    }
-                }
-            }
-        }
-
+        ret = report_var_values(model, block_size, var_map, var_count, callback,
+                                callback_ctx);
     } else if (optim_status == GRB_INFEASIBLE ||
                optim_status == GRB_INF_OR_UNBD) {
         ret = LP_INFEASIBLE;
@@ -309,4 +375,19 @@ cleanup:
     free(var_map);
     GRBfreemodel(model);
     return ret;
+}
+
+/**
+ * Value callback used when solving ILP.
+ */
+static void ilp_val_callback(int row, int col, int cell_val, double var_val,
+                             void* ctx) {
+    board_t* board = ctx;
+
+    (void)var_val;
+    board_access(board, row, col)->value = cell_val;
+}
+
+lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
+    return lp_solve(env, board, GRB_BINARY, ilp_val_callback, board);
 }
