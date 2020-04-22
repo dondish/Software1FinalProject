@@ -7,7 +7,7 @@
 #include <string.h>
 
 static void __attribute__((noreturn)) handle_alloc_error(void) {
-    printf("fatal error: failed to allocate memory: %s", strerror(errno));
+    printf("Fatal error: failed to allocate memory: %s", strerror(errno));
     abort();
 }
 
