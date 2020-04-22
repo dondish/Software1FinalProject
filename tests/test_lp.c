@@ -46,5 +46,19 @@ int main() {
 
     lp_env_destroy(env);
 
+    VAL(1, 3) = 3;
+    VAL(2, 0) = 2;
+    VAL(2, 1) = 3;
+    VAL(2, 2) = 4;
+    VAL(3, 0) = 4;
+    VAL(3, 1) = 3;
+    VAL(3, 2) = 2;
+    VAL(3, 3) = 1;
+
+    board_print(&board, stderr, FALSE);
+    assert(!board_is_legal(&board));
+
+    assert(lp_solve_ilp(env, &board) == LP_INFEASIBLE);
+
     return 0;
 }
