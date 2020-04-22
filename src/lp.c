@@ -11,10 +11,10 @@ bool_t lp_env_init(lp_env_t* env) {
     GRBenv* grb_env = NULL;
     int err = GRBloadenv(&grb_env, NULL);
     if (err) {
-        return LP_GUROBI_ERR;
+        return FALSE;
     }
     *env = grb_env;
-    return LP_SUCCESS;
+    return TRUE;
 }
 
 void lp_env_destroy(lp_env_t env) { GRBfreeenv((GRBenv*)env); }

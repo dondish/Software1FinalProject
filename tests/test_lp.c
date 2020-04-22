@@ -13,7 +13,7 @@ int main() {
 
     board_init(&board, 4, 4);
     board_access(&board, 0, 0)->value = 1;
-    assert(lp_env_init(&env) == LP_SUCCESS);
+    assert(lp_env_init(&env));
 
     assert(lp_solve_ilp(env, &board) == LP_SUCCESS);
 
