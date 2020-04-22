@@ -44,8 +44,6 @@ int main() {
 
     assert(lp_solve_ilp(env, &board) == LP_INFEASIBLE);
 
-    lp_env_destroy(env);
-
     VAL(1, 3) = 3;
     VAL(2, 0) = 2;
     VAL(2, 1) = 3;
@@ -58,7 +56,10 @@ int main() {
     board_print(&board, stderr, FALSE);
     assert(!board_is_legal(&board));
 
-    assert(lp_solve_ilp(env, &board) == LP_INFEASIBLE);
+    /* The solver has nothing to do here, so it will "succeed" */
+    assert(lp_solve_ilp(env, &board) == LP_SUCCESS);
+
+    lp_env_destroy(env);
 
     return 0;
 }

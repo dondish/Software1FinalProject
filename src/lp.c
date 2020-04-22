@@ -339,12 +339,6 @@ static lp_status_t lp_solve(lp_env_t env, board_t* board, char var_type,
 
     int optim_status;
 
-    /* Preliminary checks - if the board is full but erroneous, simply
-     * attempting to use LP will result in an empty (and feasible!) program. */
-    if (!board_is_legal(board)) {
-        return LP_INFEASIBLE;
-    }
-
     if (!create_model(env, &model)) {
         return LP_GUROBI_ERR;
     }

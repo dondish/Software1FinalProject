@@ -46,7 +46,11 @@ bool_t lp_env_init(lp_env_t* env);
 void lp_env_destroy(lp_env_t env);
 
 /**
- * Attempt to solve `board` in-place using ILP
+ * Attempt to solve `board` in-place using ILP.
+ *
+ * Note: this function does not check the legality of the board, meaning that
+ * the it may still report success when called on an erroneous board (when it
+ * has no conflicting cells to fill in itself).
  */
 lp_status_t lp_solve_ilp(lp_env_t env, board_t* board);
 
@@ -61,6 +65,10 @@ void lp_cell_candidates_destroy(lp_cell_candidates_t* candidates);
  * board.
  * The candidate values returned for each cell will be sorted in order of
  * increasing score.
+ *
+ * Note: this function does not check the legality of the board, meaning that
+ * the it may still report success when called on an erroneous board (when it
+ * has no conflicting cells to fill in itself).
  */
 lp_status_t lp_solve_continuous(lp_env_t env, board_t* board,
                                 lp_cell_candidates_t* candidates);
