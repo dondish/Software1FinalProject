@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-bool_t lp_env_init(lp_env_t* env) {
+bool_t lp_env_create(lp_env_t* env) {
     GRBenv* grb_env = NULL;
 
     if (GRBloadenv(&grb_env, NULL)) {
@@ -20,11 +20,11 @@ bool_t lp_env_init(lp_env_t* env) {
         return FALSE;
     }
 
-    *env = grb_env;
+    *env = (lp_env_t)grb_env;
     return TRUE;
 }
 
-void lp_env_destroy(lp_env_t env) { GRBfreeenv((GRBenv*)env); }
+void lp_env_free(lp_env_t env) { GRBfreeenv((GRBenv*)env); }
 
 /**
  * Access the specified part of the variable map, based on row, column and
@@ -286,7 +286,8 @@ typedef void (*lp_val_callback_t)(int block_size, int row, int col, int val,
  * Create a new sudoku model in the specified environment.
  */
 static bool_t create_model(lp_env_t env, GRBmodel** model) {
-    return !GRBnewmodel(env, model, "sudoku", 0, NULL, NULL, NULL, NULL, NULL);
+    return !GRBnewmodel((GRBenv*)env, model, "sudoku", 0, NULL, NULL, NULL,
+                        NULL, NULL);
 }
 
 /**

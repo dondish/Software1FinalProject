@@ -39,7 +39,7 @@ void __attribute__((format(printf, 1, 2))) print_success(const char* fmt, ...) {
 /* Game Initialization/Destruction */
 
 bool_t init_game(game_t* game) {
-    if (!lp_env_init(&game->lp_env)) {
+    if (!lp_env_create(&game->lp_env)) {
         print_error("Failed to initialize Gurobi.");
         return FALSE;
     }
@@ -55,7 +55,7 @@ bool_t init_game(game_t* game) {
 }
 
 void destroy_game(game_t* game) {
-    lp_env_destroy(&game->lp_env);
+    lp_env_free(game->lp_env);
     history_destroy(&game->history);
     board_destroy(&game->board);
 }
@@ -333,7 +333,7 @@ bool_t command_execute(game_t* game, command_t* command) {
             break;
         }
         board_clone(&copy, &game->board);
-        status = lp_solve_ilp(&game->lp_env, &copy);
+        status = lp_solve_ilp(game->lp_env, &copy);
         if (status == LP_SUCCESS) {
             print_success("The board is solveable.");
         } else if (status == LP_INFEASIBLE) {

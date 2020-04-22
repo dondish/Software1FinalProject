@@ -7,7 +7,7 @@
 /**
  * Opaque type representing a linear programming environment.
  */
-typedef void* lp_env_t;
+typedef struct lp_env_impl* lp_env_t;
 
 /**
  * Linear programming status codes
@@ -38,12 +38,12 @@ typedef struct lp_cell_candidates {
 /**
  * Initialize a new linear programming environment.
  */
-bool_t lp_env_init(lp_env_t* env);
+bool_t lp_env_create(lp_env_t* env);
 
 /**
  * Destroy a linear programming environment.
  */
-void lp_env_destroy(lp_env_t env);
+void lp_env_free(lp_env_t env);
 
 /**
  * Attempt to solve `board` in-place using ILP.

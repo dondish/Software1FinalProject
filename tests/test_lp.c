@@ -13,7 +13,7 @@ int main() {
 
     board_init(&board, 4, 4);
     board_access(&board, 0, 0)->value = 1;
-    assert(lp_env_init(&env));
+    assert(lp_env_create(&env));
 
     assert(lp_solve_ilp(env, &board) == LP_SUCCESS);
 
@@ -59,7 +59,7 @@ int main() {
     /* The solver has nothing to do here, so it will "succeed" */
     assert(lp_solve_ilp(env, &board) == LP_SUCCESS);
 
-    lp_env_destroy(env);
+    lp_env_free(env);
 
     return 0;
 }
