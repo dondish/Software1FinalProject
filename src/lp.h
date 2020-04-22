@@ -19,6 +19,23 @@ typedef enum lp_status {
 } lp_status_t;
 
 /**
+ * Represents a scored candidate for a specific cell value.
+ */
+typedef struct lp_candidate {
+    int val;
+    double score;
+} lp_candidate_t;
+
+/**
+ * Represents a list of scored candidate values for a given cell.
+ */
+typedef struct lp_cell_candidates {
+    int size;
+    int capacity;
+    lp_candidate_t* candidates;
+} lp_cell_candidates_t;
+
+/**
  * Initialize a new linear programming environment.
  */
 bool_t lp_env_init(lp_env_t* env);
@@ -32,5 +49,20 @@ void lp_env_destroy(lp_env_t env);
  * Attempt to solve `board` in-place using ILP
  */
 lp_status_t lp_solve_ilp(lp_env_t env, board_t* board);
+
+/**
+ * Deallocate any memory held by the specified candidate list.
+ */
+void lp_cell_candidates_destroy(lp_cell_candidates_t* candidates);
+
+/**
+ * Use continuous LP to search for solutions to `board`, storing scored
+ * candidates in `candidates`. The size of `candidates` should be that of the
+ * board.
+ * The candidate values returned for each cell will be sorted in order of
+ * increasing score.
+ */
+lp_status_t lp_solve_continuous(lp_env_t env, board_t* board,
+                                lp_cell_candidates_t* candidates);
 
 #endif
