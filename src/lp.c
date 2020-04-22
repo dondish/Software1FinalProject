@@ -23,6 +23,18 @@ bool_t lp_env_init(lp_env_t* env) {
 
 void lp_env_destroy(lp_env_t env) { GRBfreeenv((GRBenv*)env); }
 
+static void clear_var_map(int* var_map, int block_size) {
+    int i;
+    for (i = 0; i < block_size * block_size * block_size; i++) {
+        var_map[i] = -1;
+    }
+}
+
+static int* var_map_access(int* var_map, int block_size, int row, int col,
+                           int val) {
+    return &var_map[block_size * (block_size * row + col) + val - 1];
+}
+
 static int gather_candidates(board_t* board, int row, int col,
                              int* candidates) {
     cell_t* cell = board_access(board, row, col);
@@ -41,18 +53,6 @@ static int gather_candidates(board_t* board, int row, int col,
     cell->value = 0;
 
     return candidate_count;
-}
-
-static void clear_var_map(int* var_map, int block_size) {
-    int i;
-    for (i = 0; i < block_size * block_size * block_size; i++) {
-        var_map[i] = -1;
-    }
-}
-
-static int* var_map_access(int* var_map, int block_size, int row, int col,
-                           int val) {
-    return &var_map[block_size * (block_size * row + col) + val - 1];
 }
 
 static int compute_var_map(int* var_map, board_t* board) {
@@ -86,6 +86,105 @@ static int compute_var_map(int* var_map, board_t* board) {
     return var_count;
 }
 
+/*
+ * Abstraction for a function that can retrieve a value from the variable map
+ * based on three indices (two "contexts" and one "local offset", all in the
+ * range `[0, board_size)`). This is used go generalize constraint computation
+ * for cells, rows, columns and blocks.
+ */
+typedef int (*var_map_retriever_t)(const board_t* board, int* var_map, int ctx1,
+                                   int ctx2, int local_off);
+
+/**
+ * Add constraints to the model based on variable indices found in the variable
+ * map. For every values of `ctx1`, `ctx2` in `[0, block_size)`, `local_off` is
+ * iterated through `[0, block_size)` as well, and all variable indices found
+ * within a specific context are added as a constraint to the model.
+ *
+ * `indices` will be used as scratch space for the operation and should have
+ * room for `block_size` entries.
+ *
+ * `coeffs` are the actual coefficients that will be provided to the
+ * constraints, and should contain `block_size` entries. They are provided
+ * externally to avoid repeated reallocation acrosss multiple `add_constraints`
+ * calls.
+ */
+static lp_status_t add_constraints(GRBmodel* model, const board_t* board,
+                                   int* var_map, var_map_retriever_t retrieve,
+                                   int* indices, double* coeffs) {
+    int block_size = board_block_size(board);
+    int ctx1, ctx2;
+
+    for (ctx1 = 0; ctx1 < block_size; ctx1++) {
+        for (ctx2 = 0; ctx2 < block_size; ctx2++) {
+            int numnz = 0;
+
+            int local_off;
+            for (local_off = 0; local_off < block_size; local_off++) {
+                int var_idx = retrieve(board, var_map, ctx1, ctx2, local_off);
+                if (var_idx != -1) {
+                    indices[numnz++] = var_idx;
+                }
+            }
+
+            if (numnz) {
+                if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL, 1.0,
+                                 NULL)) {
+                    return LP_GUROBI_ERR;
+                }
+            }
+        }
+    }
+
+    return LP_SUCCESS;
+}
+
+/**
+ * Retriever for adding cell constraints - local offset enumerates cell values.
+ */
+static int retrieve_by_cell(const board_t* board, int* var_map, int ctx1,
+                            int ctx2, int local_off) {
+    return *var_map_access(var_map, board_block_size(board), ctx1, ctx2,
+                           local_off + 1);
+}
+
+/**
+ * Retriever for adding row constraints - local offset enumerates columns.
+ */
+static int retrieve_by_row(const board_t* board, int* var_map, int ctx1,
+                           int ctx2, int local_off) {
+    return *var_map_access(var_map, board_block_size(board), ctx1, local_off,
+                           ctx2 + 1);
+}
+
+/**
+ * Retriever for adding column constraints - local offset enumerates rows.
+ */
+static int retrieve_by_col(const board_t* board, int* var_map, int ctx1,
+                           int ctx2, int local_off) {
+    return *var_map_access(var_map, board_block_size(board), local_off, ctx1,
+                           ctx2 + 1);
+}
+
+/**
+ * Retriever for adding block constraints - local offset enumerates index within
+ * block.
+ */
+static int retrieve_by_block(const board_t* board, int* var_map, int ctx1,
+                             int ctx2, int local_off) {
+    int block_row = ctx1 / board->m;
+    int block_col = ctx1 % board->m;
+
+    int local_row = local_off / board->n;
+    int local_col = local_off % board->n;
+
+    int row = board_block_row(board, block_row, local_row);
+    int col = board_block_col(board, block_col, local_col);
+
+    return *var_map_access(var_map, board_block_size(board), row, col,
+                           ctx2 + 1);
+}
+
 static void fill_coeffs(double* coeffs, int block_size) {
     int i;
     for (i = 0; i < block_size; i++) {
@@ -93,111 +192,37 @@ static void fill_coeffs(double* coeffs, int block_size) {
     }
 }
 
-static lp_status_t add_constraints(GRBmodel* model, board_t* board,
-                                   int* var_map) {
+static lp_status_t add_board_constraints(GRBmodel* model, const board_t* board,
+                                         int* var_map) {
     lp_status_t ret = LP_SUCCESS;
 
     int block_size = board_block_size(board);
 
     int* indices = checked_calloc(block_size, sizeof(int));
     double* coeffs = checked_calloc(block_size, sizeof(double));
-    int row, col, val;
 
     fill_coeffs(coeffs, block_size);
 
-    for (row = 0; row < block_size; row++) {
-        for (col = 0; col < block_size; col++) {
-            int numnz = 0;
-
-            for (val = 1; val <= block_size; val++) {
-                int var_idx =
-                    *var_map_access(var_map, block_size, row, col, val);
-                if (var_idx != -1) {
-                    indices[numnz++] = var_idx;
-                }
-            }
-
-            if (numnz) {
-                if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL, 1.0,
-                                 NULL)) {
-                    ret = LP_GUROBI_ERR;
-                    goto cleanup;
-                }
-            }
-        }
+    ret = add_constraints(model, board, var_map, retrieve_by_cell, indices,
+                          coeffs);
+    if (ret != LP_SUCCESS) {
+        goto cleanup;
     }
 
-    for (val = 1; val <= block_size; val++) {
-        for (row = 0; row < block_size; row++) {
-            int numnz = 0;
-
-            for (col = 0; col < block_size; col++) {
-                int var_idx =
-                    *var_map_access(var_map, block_size, row, col, val);
-                if (var_idx != -1) {
-                    indices[numnz++] = var_idx;
-                }
-            }
-
-            if (numnz) {
-                if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL, 1.0,
-                                 NULL)) {
-                    ret = LP_GUROBI_ERR;
-                    goto cleanup;
-                }
-            }
-        }
+    ret = add_constraints(model, board, var_map, retrieve_by_row, indices,
+                          coeffs);
+    if (ret != LP_SUCCESS) {
+        goto cleanup;
     }
 
-    for (val = 1; val <= block_size; val++) {
-        for (col = 0; col < block_size; col++) {
-            int numnz = 0;
-
-            for (row = 0; row < block_size; row++) {
-                int var_idx =
-                    *var_map_access(var_map, block_size, row, col, val);
-                if (var_idx != -1) {
-                    indices[numnz++] = var_idx;
-                }
-            }
-
-            if (numnz) {
-                if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL, 1.0,
-                                 NULL)) {
-                    ret = LP_GUROBI_ERR;
-                    goto cleanup;
-                }
-            }
-        }
+    ret = add_constraints(model, board, var_map, retrieve_by_col, indices,
+                          coeffs);
+    if (ret != LP_SUCCESS) {
+        goto cleanup;
     }
 
-    for (val = 1; val <= block_size; val++) {
-        int block_row, block_col, local_row, local_col;
-        for (block_row = 0; block_row < board->n; block_row++) {
-            for (block_col = 0; block_col < board->m; block_col++) {
-                int numnz = 0;
-                for (local_row = 0; local_row < board->m; local_row++) {
-                    for (local_col = 0; local_col < board->n; local_col++) {
-                        int var_idx = *var_map_access(
-                            var_map, block_size,
-                            block_row * board->m + local_row,
-                            block_col * board->n + local_col, val);
-                        if (var_idx != -1) {
-                            indices[numnz++] = var_idx;
-                        }
-                    }
-                }
-
-                if (numnz) {
-                    if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL,
-                                     1.0, NULL)) {
-                        ret = LP_GUROBI_ERR;
-                        goto cleanup;
-                    }
-                }
-            }
-        }
-    }
+    ret = add_constraints(model, board, var_map, retrieve_by_block, indices,
+                          coeffs);
 
 cleanup:
     free(coeffs);
@@ -236,7 +261,7 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
         goto cleanup;
     }
 
-    ret = add_constraints(model, board, var_map);
+    ret = add_board_constraints(model, board, var_map);
     if (ret != LP_SUCCESS) {
         goto cleanup;
     }
