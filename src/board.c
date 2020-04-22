@@ -31,11 +31,11 @@ void board_clone(board_t* dest, const board_t* src) {
 
 int board_block_size(const board_t* board) { return board->m * board->n; }
 
-int board_block_row(board_t* board, int block_row, int local_row) {
+int board_block_row(const board_t* board, int block_row, int local_row) {
     return block_row * board->m + local_row;
 }
 
-int board_block_col(board_t* board, int block_col, int local_col) {
+int board_block_col(const board_t* board, int block_col, int local_col) {
     return block_col * board->n + local_col;
 }
 
