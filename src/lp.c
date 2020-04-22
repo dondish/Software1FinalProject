@@ -5,7 +5,6 @@
 #include "checked_alloc.h"
 #include <gurobi_c.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 static bool_t create_model(lp_env_t env, GRBmodel** model) {
@@ -268,20 +267,14 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
                     int var_idx =
                         *var_map_access(var_map, block_size, row, col, val);
                     if (var_idx != -1 && var_values[var_idx] > 0.0) {
-                        cell_t* cell = board_access(board, row, col);
-                        if (!cell_is_empty(cell)) {
-                            fprintf(stderr, "Multiple values for cell (%d, %d)",
-                                    row, col);
-                            ret = LP_INFEASIBLE;
-                            goto cleanup;
-                        }
-                        cell->value = val;
+                        board_access(board, row, col)->value = val;
                     }
                 }
             }
         }
 
-    } else if (optim_status == GRB_INF_OR_UNBD) {
+    } else if (optim_status == GRB_INFEASIBLE ||
+               optim_status == GRB_INF_OR_UNBD) {
         ret = LP_INFEASIBLE;
     } else {
         ret = LP_GUROBI_ERR;
