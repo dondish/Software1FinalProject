@@ -39,9 +39,12 @@ bool_t init_game(game_t* game) {
     }
 
     game->mode = GM_INIT;
-    /* Placeholder, so that the board is always valid */
-    board_init(&game->board, 0, 0);
+
+    /* Note: this placeholder can be destroyed via board_destroy without any ill
+     * effects. */
+    memset(&game->board, 0, sizeof(board_t));
     history_init(&game->history);
+
     return TRUE;
 }
 
@@ -56,6 +59,9 @@ typedef struct command_lookup_cell {
     const char* message;
 } command_lookup_cell_t;
 
+/**
+ * Print usage information for the specified command type.
+ */
 static void print_usage(command_type_t type) {
     static const command_lookup_cell_t command_lookup_table[] = {
         {CT_SOLVE, "solve <file path>"},
@@ -117,10 +123,22 @@ void print_parser_error(command_t* cmd, parser_error_codes_t error) {
     }
 }
 
-static bool_t load_board_from_file(board_t* board, const char* filename) {
-    FILE* file;
+/* Command Execution */
 
-    file = fopen(filename, "r");
+/**
+ * Print the current game board
+ */
+static void game_board_print(const game_t* game) {
+    board_print(&game->board, stdout,
+                game->mark_errors || game->mode == GM_EDIT);
+}
+
+/**
+ * Attempt to load `board` from the specified filename, displaying any errors to
+ * the user.
+ */
+static bool_t load_board_from_file(board_t* board, const char* filename) {
+    FILE* file = fopen(filename, "r");
 
     if (file == NULL) {
         print_error("Failed to open file '%s': %s.", filename, strerror(errno));
@@ -141,59 +159,99 @@ static bool_t load_board_from_file(board_t* board, const char* filename) {
     return FALSE;
 }
 
-static void game_board_print(const game_t* game) {
-    board_print(&game->board, stdout,
-                game->mark_errors || game->mode == GM_EDIT);
+/**
+ * Update the game mode to the specified mode, clearing history and replacing
+ * and printing the board.
+ */
+static void enter_game_mode(game_t* game, game_mode_t mode, board_t* board) {
+    game->mode = mode;
+
+    history_clear(&game->history);
+
+    board_destroy(&game->board);
+    memcpy(&game->board, board, sizeof(board_t));
+    memset(board, 0, sizeof(board_t));
+
+    board_mark_errors(&game->board);
+    game_board_print(game);
+}
+
+/**
+ * Initialize a new board in `dest` containing only fixed cells from `src`.
+ */
+static void clone_fixed(board_t* dest, const board_t* src) {
+    int block_size = board_block_size(src);
+
+    int row;
+    int col;
+
+    board_init(dest, src->m, src->n);
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            const cell_t* src_cell = board_access_const(src, row, col);
+
+            if (cell_is_fixed(src_cell)) {
+                board_access(dest, row, col)->value = src_cell->value;
+            }
+        }
+    }
+}
+
+/**
+ * Check that the fixed cells of `board` are legal.
+ */
+static bool_t check_fixed_cells(const board_t* board) {
+    board_t fixed;
+    bool_t ret;
+
+    clone_fixed(&fixed, board);
+    ret = board_is_legal(&fixed);
+    board_destroy(&fixed);
+
+    return ret;
 }
 
 bool_t command_execute(game_t* game, command_t* command) {
     switch (command->type) {
     case CT_SOLVE: {
-        board_t board, fixed_check;
-        int i, j;
+        board_t board;
 
         char* filename = command->arg.str_val;
+        bool_t loaded = load_board_from_file(&board, filename);
+        free(filename);
 
-        if (!load_board_from_file(&board, filename)) {
+        if (!loaded) {
             break;
         }
 
-        board_init(&fixed_check, board.m, board.n);
-
-        for (i = 0; i < board.m * board.n; i++) {
-            for (j = 0; j < board.m * board.n; j++) {
-                if (!(board_access(&fixed_check, i, j)->flags & CF_FIXED)) {
-                    board_access(&fixed_check, i, j)->value = 0;
-                }
-            }
-        }
-
-        if (!board_is_legal(&fixed_check)) {
+        if (!check_fixed_cells(&board)) {
             print_error("The board's fixed cells are illegaly placed.");
-        } else {
-            history_clear(&game->history);
-            game->mode = GM_SOLVE;
-            board_clone(&game->board, &board);
-            game_board_print(game);
+            break;
         }
-        free(filename);
+
+        enter_game_mode(game, GM_SOLVE, &board);
+
         break;
     }
     case CT_EDIT: {
-        if (command->arg.str_val) {
-            board_t copy;
-            if (!load_board_from_file(&copy, command->arg.str_val)) {
+        board_t board;
+        char* filename = command->arg.str_val;
+
+        if (filename) {
+            bool_t loaded = load_board_from_file(&board, filename);
+            free(filename);
+
+            if (!loaded) {
                 break;
             }
 
-            board_clone(&game->board, &copy);
         } else {
-            board_init(&game->board, 3, 3);
+            board_init(&board, 3, 3);
         }
-        game->mode = GM_EDIT;
-        history_clear(&game->history);
-        board_mark_errors(&game->board);
-        game_board_print(game);
+
+        enter_game_mode(game, GM_EDIT, &board);
+
         break;
     }
     case CT_MARK_ERRORS: {
@@ -205,12 +263,16 @@ bool_t command_execute(game_t* game, command_t* command) {
         break;
     }
     case CT_SET: {
-        int x = command->arg.three_int_val.i, y = command->arg.three_int_val.j;
-        int val = command->arg.three_int_val.k;
         int block_size = board_block_size(&game->board);
+
+        int col = command->arg.three_int_val.i - 1;
+        int row = command->arg.three_int_val.j - 1;
+        int val = command->arg.three_int_val.k;
+
+        cell_t* cell;
         delta_list_t updates;
 
-        if (x <= 0 || x > block_size || y <= 0 || y > block_size) {
+        if (col < 0 || col >= block_size || row < 0 || row >= block_size) {
             print_error("The indices are out of range.");
             break;
         }
@@ -220,14 +282,15 @@ bool_t command_execute(game_t* game, command_t* command) {
             break;
         }
 
-        if (cell_is_fixed(board_access(&game->board, y - 1, x - 1))) {
+        if (cell_is_fixed(board_access(&game->board, row, col))) {
             print_error("This cell is fixed and cannot be updated.");
             break;
         }
 
+        cell = board_access(&game->board, row, col);
+
         delta_list_init(&updates);
-        delta_list_add(&updates, y - 1, x - 1,
-                       board_access(&game->board, y - 1, x - 1)->value, val);
+        delta_list_add(&updates, row, col, cell->value, val);
         delta_list_apply(&game->board, &updates, NULL, NULL);
         history_add_item(&game->history, &updates);
 
