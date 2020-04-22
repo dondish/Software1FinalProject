@@ -94,13 +94,15 @@ static void fill_coeffs(double* coeffs, int block_size) {
     }
 }
 
-static lp_status_t add_constraints(GRBmodel* model, int block_size,
+static lp_status_t add_constraints(GRBmodel* model, board_t* board,
                                    int* var_map) {
     lp_status_t ret = LP_SUCCESS;
 
+    int block_size = board_block_size(board);
+
     int* indices = checked_calloc(block_size, sizeof(int));
     double* coeffs = checked_calloc(block_size, sizeof(double));
-    int row, col;
+    int row, col, val;
 
     fill_coeffs(coeffs, block_size);
 
@@ -108,7 +110,6 @@ static lp_status_t add_constraints(GRBmodel* model, int block_size,
         for (col = 0; col < block_size; col++) {
             int numnz = 0;
 
-            int val;
             for (val = 1; val <= block_size; val++) {
                 int var_idx =
                     *var_map_access(var_map, block_size, row, col, val);
@@ -122,6 +123,78 @@ static lp_status_t add_constraints(GRBmodel* model, int block_size,
                                  NULL)) {
                     ret = LP_GUROBI_ERR;
                     goto cleanup;
+                }
+            }
+        }
+    }
+
+    for (val = 1; val <= block_size; val++) {
+        for (row = 0; row < block_size; row++) {
+            int numnz = 0;
+
+            for (col = 0; col < block_size; col++) {
+                int var_idx =
+                    *var_map_access(var_map, block_size, row, col, val);
+                if (var_idx != -1) {
+                    indices[numnz++] = var_idx;
+                }
+            }
+
+            if (numnz) {
+                if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL, 1.0,
+                                 NULL)) {
+                    ret = LP_GUROBI_ERR;
+                    goto cleanup;
+                }
+            }
+        }
+    }
+
+    for (val = 1; val <= block_size; val++) {
+        for (col = 0; col < block_size; col++) {
+            int numnz = 0;
+
+            for (row = 0; row < block_size; row++) {
+                int var_idx =
+                    *var_map_access(var_map, block_size, row, col, val);
+                if (var_idx != -1) {
+                    indices[numnz++] = var_idx;
+                }
+            }
+
+            if (numnz) {
+                if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL, 1.0,
+                                 NULL)) {
+                    ret = LP_GUROBI_ERR;
+                    goto cleanup;
+                }
+            }
+        }
+    }
+
+    for (val = 1; val <= block_size; val++) {
+        int block_row, block_col, local_row, local_col;
+        for (block_row = 0; block_row < board->n; block_row++) {
+            for (block_col = 0; block_col < board->m; block_col++) {
+                int numnz = 0;
+                for (local_row = 0; local_row < board->m; local_row++) {
+                    for (local_col = 0; local_col < board->n; local_col++) {
+                        int var_idx = *var_map_access(
+                            var_map, block_size,
+                            block_row * board->m + local_row,
+                            block_col * board->n + local_col, val);
+                        if (var_idx != -1) {
+                            indices[numnz++] = var_idx;
+                        }
+                    }
+                }
+
+                if (numnz) {
+                    if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL,
+                                     1.0, NULL)) {
+                        ret = LP_GUROBI_ERR;
+                        goto cleanup;
+                    }
                 }
             }
         }
@@ -162,7 +235,7 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
         goto cleanup;
     }
 
-    ret = add_constraints(model, block_size, var_map);
+    ret = add_constraints(model, board, var_map);
     if (ret != LP_SUCCESS) {
         goto cleanup;
     }
