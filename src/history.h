@@ -88,6 +88,11 @@ void history_init(history_t* history);
 void history_destroy(history_t* history);
 
 /**
+ * Clear the specified history.
+ */
+void history_clear(history_t* history);
+
+/**
  * Add a new item to the history, clearing the existing redo stack.
  *
  * Note: `item` is invalidated and ownership of its contents is transferred to

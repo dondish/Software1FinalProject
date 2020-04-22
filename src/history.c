@@ -79,6 +79,11 @@ void history_destroy(history_t* history) {
     list_destroy(&history->list, delta_list_destroy_and_free);
 }
 
+void history_clear(history_t* history) {
+    history_destroy(history);
+    history_init(history);
+}
+
 void history_add_item(history_t* history, delta_list_t* item) {
     list_node_t* redo_start;
 
