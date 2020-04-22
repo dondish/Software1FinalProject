@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void increase_memory(delta_list_t* list) {
+static void realloc_grow(delta_list_t* list) {
     list->capacity *= 2;
     list->deltas =
         checked_realloc(list->deltas, list->capacity * sizeof(delta_t));
@@ -24,7 +24,7 @@ void delta_list_destroy(delta_list_t* list) { free(list->deltas); }
 void delta_list_add(delta_list_t* list, int row, int col, int old_val,
                     int new_val) {
     if (list->size == list->capacity) {
-        increase_memory(list);
+        realloc_grow(list);
     }
 
     list->deltas[list->size].row = row;
