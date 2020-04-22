@@ -198,6 +198,8 @@ static void enter_game_mode(game_t* game, game_mode_t mode, board_t* board) {
     memcpy(&game->board, board, sizeof(board_t));
     memset(board, 0, sizeof(board_t));
 
+    print_success("Entering %s mode...", game_mode_to_str(mode));
+
     board_mark_errors(&game->board);
     game_board_print(game);
 }
