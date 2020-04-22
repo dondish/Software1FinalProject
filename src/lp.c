@@ -9,10 +9,16 @@
 
 bool_t lp_env_init(lp_env_t* env) {
     GRBenv* grb_env = NULL;
-    int err = GRBloadenv(&grb_env, NULL);
-    if (err) {
+
+    if (GRBloadenv(&grb_env, NULL)) {
         return FALSE;
     }
+
+    if (GRBsetintparam(grb_env, GRB_INT_PAR_OUTPUTFLAG, 0)) {
+        GRBfreeenv(grb_env);
+        return FALSE;
+    }
+
     *env = grb_env;
     return TRUE;
 }
