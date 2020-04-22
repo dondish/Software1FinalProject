@@ -3,6 +3,8 @@
 #include "board.h"
 #include <assert.h>
 
+#define VAL(row, col) board_access(&board, row, col)->value
+
 int main() {
     board_t board;
     lp_env_t env;
@@ -24,6 +26,23 @@ int main() {
             assert(!cell_is_empty(board_access(&board, i, j)));
         }
     }
+
+    board_destroy(&board);
+    board_init(&board, 2, 2);
+
+    VAL(0, 0) = 1;
+    VAL(0, 1) = 2;
+    VAL(1, 0) = 3;
+    VAL(1, 1) = 4;
+    VAL(0, 2) = 3;
+    VAL(0, 3) = 4;
+    VAL(1, 2) = 1;
+    VAL(2, 3) = 2;
+
+    board_print(&board, stderr, FALSE);
+    assert(board_is_legal(&board));
+
+    assert(lp_solve_ilp(env, &board) == LP_INFEASIBLE);
 
     lp_env_destroy(env);
 
