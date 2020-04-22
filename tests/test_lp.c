@@ -11,7 +11,7 @@ int main() {
     board_access(&board, 0, 0)->value = 1;
     assert(lp_env_init(&env) == LP_SUCCESS);
 
-    lp_solve_ilp(env, &board);
+    assert(lp_solve_ilp(env, &board) == LP_SUCCESS);
 
     lp_env_destroy(env);
 
