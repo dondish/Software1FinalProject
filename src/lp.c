@@ -215,6 +215,8 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
     int var_count, var_idx;
     int* var_map;
 
+    int optim_status;
+
     if (!create_model(env, &model)) {
         return LP_GUROBI_ERR;
     }
@@ -240,9 +242,49 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
         goto cleanup;
     }
 
-    if (GRBupdatemodel(model)) {
+    if (GRBoptimize(model)) {
         ret = LP_GUROBI_ERR;
         goto cleanup;
+    }
+
+    if (GRBgetintattr(model, GRB_INT_ATTR_STATUS, &optim_status)) {
+        ret = LP_GUROBI_ERR;
+        goto cleanup;
+    }
+
+    if (optim_status == GRB_OPTIMAL) {
+        double* var_values = checked_calloc(var_count, sizeof(double));
+        int row, col, val;
+
+        if (GRBgetdblattrarray(model, GRB_DBL_ATTR_X, 0, var_count,
+                               var_values)) {
+            ret = LP_GUROBI_ERR;
+            goto cleanup;
+        }
+
+        for (row = 0; row < block_size; row++) {
+            for (col = 0; col < block_size; col++) {
+                for (val = 1; val <= block_size; val++) {
+                    int var_idx =
+                        *var_map_access(var_map, block_size, row, col, val);
+                    if (var_idx != -1 && var_values[var_idx] > 0.0) {
+                        cell_t* cell = board_access(board, row, col);
+                        if (!cell_is_empty(cell)) {
+                            fprintf(stderr, "Multiple values for cell (%d, %d)",
+                                    row, col);
+                            ret = LP_INFEASIBLE;
+                            goto cleanup;
+                        }
+                        cell->value = val;
+                    }
+                }
+            }
+        }
+
+    } else if (optim_status == GRB_INF_OR_UNBD) {
+        ret = LP_INFEASIBLE;
+    } else {
+        ret = LP_GUROBI_ERR;
     }
 
 cleanup:
