@@ -53,7 +53,7 @@ static void clear_var_map(int* var_map, int block_size) {
 
 static int* var_map_access(int* var_map, int block_size, int row, int col,
                            int val) {
-    return &var_map[block_size * (block_size * row + col) + val];
+    return &var_map[block_size * (block_size * row + col) + val - 1];
 }
 
 static int compute_var_map(int* var_map, board_t* board) {
@@ -87,6 +87,52 @@ static int compute_var_map(int* var_map, board_t* board) {
     return var_count;
 }
 
+static void fill_coeffs(double* coeffs, int block_size) {
+    int i;
+    for (i = 0; i < block_size; i++) {
+        coeffs[i] = 1.0;
+    }
+}
+
+static lp_status_t add_constraints(GRBmodel* model, int block_size,
+                                   int* var_map) {
+    lp_status_t ret = LP_SUCCESS;
+
+    int* indices = checked_calloc(block_size, sizeof(int));
+    double* coeffs = checked_calloc(block_size, sizeof(double));
+    int row, col;
+
+    fill_coeffs(coeffs, block_size);
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            int numnz = 0;
+
+            int val;
+            for (val = 1; val <= block_size; val++) {
+                int var_idx =
+                    *var_map_access(var_map, block_size, row, col, val);
+                if (var_idx != -1) {
+                    indices[numnz++] = var_idx;
+                }
+            }
+
+            if (numnz) {
+                if (GRBaddconstr(model, numnz, indices, coeffs, GRB_EQUAL, 1.0,
+                                 NULL)) {
+                    ret = LP_GUROBI_ERR;
+                    goto cleanup;
+                }
+            }
+        }
+    }
+
+cleanup:
+    free(coeffs);
+    free(indices);
+    return ret;
+}
+
 lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
     lp_status_t ret = LP_SUCCESS;
 
@@ -102,7 +148,6 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
 
     var_map =
         checked_malloc(block_size * block_size * block_size * sizeof(int));
-
     var_count = compute_var_map(var_map, board);
 
     for (var_idx = 0; var_idx < var_count; var_idx++) {
@@ -117,7 +162,18 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
         goto cleanup;
     }
 
+    ret = add_constraints(model, block_size, var_map);
+    if (ret != LP_SUCCESS) {
+        goto cleanup;
+    }
+
+    if (GRBupdatemodel(model)) {
+        ret = LP_GUROBI_ERR;
+        goto cleanup;
+    }
+
 cleanup:
     free(var_map);
+    GRBfreemodel(model);
     return ret;
 }
