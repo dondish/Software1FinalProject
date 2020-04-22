@@ -9,7 +9,7 @@ find_library(GUROBI_LIBRARY
     PATH_SUFFIXES lib)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(GUROBI DEFAULT_MSG GUROBI_LIBRARY)
+find_package_handle_standard_args(GUROBI DEFAULT_MSG GUROBI_LIBRARY GUROBI_INCLUDE_DIRS)
 
 add_library(Gurobi::Gurobi INTERFACE IMPORTED)
 target_include_directories(Gurobi::Gurobi INTERFACE ${GUROBI_INCLUDE_DIRS})
