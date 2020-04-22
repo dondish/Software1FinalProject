@@ -388,10 +388,27 @@ cleanup:
 /* ILP */
 
 /**
- * Value callback used when solving ILP.
+ * Value callback used when validating with ILP.
  */
-static void ilp_val_callback(int block_size, int row, int col, int val,
-                             double score, void* ctx) {
+static void ilp_validate_callback(int block_size, int row, int col, int val,
+                                  double score, void* ctx) {
+    (void)block_size;
+    (void)row;
+    (void)col;
+    (void)val;
+    (void)score;
+    (void)ctx;
+}
+
+lp_status_t lp_validate_ilp(lp_env_t env, board_t* board) {
+    return lp_solve(env, board, GRB_BINARY, ilp_validate_callback, NULL);
+}
+
+/**
+ * Value callback used when solving with ILP.
+ */
+static void ilp_solve_callback(int block_size, int row, int col, int val,
+                               double score, void* ctx) {
     board_t* board = ctx;
 
     (void)block_size;
@@ -400,7 +417,7 @@ static void ilp_val_callback(int block_size, int row, int col, int val,
 }
 
 lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
-    return lp_solve(env, board, GRB_BINARY, ilp_val_callback, board);
+    return lp_solve(env, board, GRB_BINARY, ilp_solve_callback, board);
 }
 
 /* Continuous LP */

@@ -15,6 +15,7 @@ int main() {
     board_access(&board, 0, 0)->value = 1;
     assert(lp_env_create(&env));
 
+    assert(lp_validate_ilp(env, &board) == LP_SUCCESS);
     assert(lp_solve_ilp(env, &board) == LP_SUCCESS);
 
     board_print(&board, stderr, FALSE);
@@ -42,6 +43,7 @@ int main() {
     board_print(&board, stderr, FALSE);
     assert(board_is_legal(&board));
 
+    assert(lp_validate_ilp(env, &board) == LP_INFEASIBLE);
     assert(lp_solve_ilp(env, &board) == LP_INFEASIBLE);
 
     VAL(1, 3) = 3;
@@ -57,6 +59,7 @@ int main() {
     assert(!board_is_legal(&board));
 
     /* The solver has nothing to do here, so it will "succeed" */
+    assert(lp_validate_ilp(env, &board) == LP_SUCCESS);
     assert(lp_solve_ilp(env, &board) == LP_SUCCESS);
 
     lp_env_free(env);
