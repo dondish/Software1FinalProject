@@ -18,8 +18,10 @@
 static void __attribute__((format(printf, 1, 2)))
 print_error(const char* fmt, ...) {
     va_list ap;
+    va_start(ap, fmt);
     printf("Error: ");
     vprintf(fmt, ap);
+    va_end(ap);
     puts("");
 }
 
@@ -28,7 +30,9 @@ print_error(const char* fmt, ...) {
  */
 void __attribute__((format(printf, 1, 2))) print_success(const char* fmt, ...) {
     va_list ap;
+    va_start(ap, fmt);
     vprintf(fmt, ap);
+    va_end(ap);
     puts("");
 }
 
@@ -161,8 +165,9 @@ static void game_board_print(const game_t* game) {
 static bool_t load_board_from_file(board_t* board, const char* filename) {
     FILE* file = fopen(filename, "r");
 
-    if (file == NULL) {
-        print_error("Failed to open file '%s': %s.", filename, strerror(errno));
+    if (!file) {
+        char* msg = strerror(errno);
+        print_error("Failed to open file '%s': %s.", filename, msg);
         return FALSE;
     }
 
