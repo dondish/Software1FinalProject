@@ -18,6 +18,7 @@ int main() {
 
     while (should_continue) {
         do {
+            print_prompt(&state);
             parse_status = parse_line(stdin, &cmd, state.mode);
         } while (parse_status == P_IGNORE);
 

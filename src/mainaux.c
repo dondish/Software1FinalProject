@@ -32,6 +32,8 @@ void __attribute__((format(printf, 1, 2))) print_success(const char* fmt, ...) {
     puts("");
 }
 
+/* Game Initialization/Destruction */
+
 bool_t init_game(game_t* game) {
     if (!lp_env_init(&game->lp_env)) {
         print_error("Failed to initialize Gurobi.");
@@ -53,6 +55,25 @@ void destroy_game(game_t* game) {
     history_destroy(&game->history);
     board_destroy(&game->board);
 }
+
+/* Prompt Display */
+
+static const char* game_mode_to_str(game_mode_t mode) {
+    switch (mode) {
+    case GM_INIT:
+        return "init";
+    case GM_EDIT:
+        return "edit";
+    case GM_SOLVE:
+        return "solve";
+    }
+}
+
+void print_prompt(game_t* game) {
+    printf("%s> ", game_mode_to_str(game->mode));
+}
+
+/* Parser Error Display */
 
 typedef struct command_lookup_cell {
     command_type_t type;
@@ -245,7 +266,6 @@ bool_t command_execute(game_t* game, command_t* command) {
             if (!loaded) {
                 break;
             }
-
         } else {
             board_init(&board, 3, 3);
         }
