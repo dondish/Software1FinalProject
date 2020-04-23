@@ -46,9 +46,10 @@ bool_t init_game(game_t* game) {
     }
 
     game->mode = GM_INIT;
+    game->mark_errors = TRUE;
 
-    /* Note: this placeholder can be destroyed via board_destroy without any ill
-     * effects. */
+    /* Note: this placeholder can be destroyed via board_destroy without any
+     * ill effects. */
     memset(&game->board, 0, sizeof(board_t));
     history_init(&game->history);
 
@@ -498,6 +499,8 @@ bool_t command_execute(game_t* game, command_t* command) {
     }
     case CT_MARK_ERRORS:
         game->mark_errors = command->arg.bool_val;
+        print_success("Errors will %sbe marked.",
+                      game->mark_errors ? "" : "not ");
         break;
 
     case CT_PRINT_BOARD:
