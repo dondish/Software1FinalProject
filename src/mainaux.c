@@ -572,6 +572,7 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         if (!check_fixed_cells(&board)) {
             print_error("The board's fixed cells are illegally placed.");
+            board_destroy(&board);
             break;
         }
 
