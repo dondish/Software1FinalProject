@@ -165,6 +165,14 @@ static void game_board_print(const game_t* game) {
 }
 
 /**
+ * Print the current game board, assuming it has changed.
+ */
+static void game_board_print_after_change(game_t* game) {
+    board_mark_errors(&game->board);
+    game_board_print(game);
+}
+
+/**
  * Attempt to load `board` from the specified filename, displaying any errors to
  * the user.
  */
@@ -204,9 +212,7 @@ static void enter_game_mode(game_t* game, game_mode_t mode, board_t* board) {
     memset(board, 0, sizeof(board_t));
 
     print_success("Entering %s mode...", game_mode_to_str(mode));
-
-    board_mark_errors(&game->board);
-    game_board_print(game);
+    game_board_print_after_change(game);
 }
 
 /**
@@ -294,8 +300,14 @@ static void game_apply_delta(game_t* game, delta_list_t* delta) {
     delta_list_apply(&game->board, delta, NULL);
     history_add_item(&game->history, delta);
 
-    board_mark_errors(&game->board);
-    game_board_print(game);
+    game_board_print_after_change(game);
+}
+
+/**
+ * Delta application callback that prints the current change to the user.
+ */
+static void user_notify_delta_callback(int row, int col, int old, int new) {
+    print_success("(%d, %d): %d -> %d", col + 1, row + 1, old, new);
 }
 
 bool_t command_execute(game_t* game, command_t* command) {
@@ -377,6 +389,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         delta_list_init(&updates);
         delta_list_add(&updates, row, col, cell->value, val);
         game_apply_delta(game, &updates);
+
         break;
     }
     case CT_VALIDATE: {
@@ -399,6 +412,30 @@ bool_t command_execute(game_t* game, command_t* command) {
         break;
     }
     case CT_GUESS: {
+        break;
+    }
+    case CT_UNDO: {
+        const delta_list_t* delta = history_undo(&game->history);
+        if (!delta) {
+            print_error("Nothing to undo.");
+            break;
+        }
+
+        delta_list_revert(&game->board, delta, user_notify_delta_callback);
+        game_board_print_after_change(game);
+
+        break;
+    }
+    case CT_REDO: {
+        const delta_list_t* delta = history_redo(&game->history);
+        if (!delta) {
+            print_error("Nothing to redo.");
+            break;
+        }
+
+        delta_list_apply(&game->board, delta, user_notify_delta_callback);
+        game_board_print_after_change(game);
+
         break;
     }
     case CT_EXIT: {
