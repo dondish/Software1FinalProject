@@ -296,6 +296,22 @@ static bool_t check_fixed_cells(const board_t* board) {
 }
 
 /**
+ * Set the flags of all cells on the board to `flags`.
+ */
+static void set_cell_flags(board_t* board, cell_flags_t flags) {
+    int block_size = board_block_size(board);
+
+    int row;
+    int col;
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            board_access(board, row, col)->flags = flags;
+        }
+    }
+}
+
+/**
  * Check that the game's board is legal, printing an error if it isn't.
  * Returns whether the board is legal.
  */
@@ -388,6 +404,9 @@ bool_t command_execute(game_t* game, command_t* command) {
             if (!loaded) {
                 break;
             }
+
+            /* Fixed cells have no meaning here. */
+            set_cell_flags(&board, CF_NONE);
         } else {
             board_init(&board, 3, 3);
         }
