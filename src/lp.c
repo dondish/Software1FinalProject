@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define GENERATE_MAX_ATTEMPTS 1000
+
 bool_t lp_env_create(lp_env_t* env) {
     GRBenv* grb_env = NULL;
 
@@ -50,11 +52,15 @@ static void clear_var_map(int* var_map, int block_size) {
  * Populate the variable map based on the specified board. Every entry of the
  * map will contain an index, or -1 if no variable is to be associated with the
  * corresponding cell value.
+ * If an empty cell without candidates is found, false will be returned (the
+ * board is unsolvable).
  */
-static int compute_var_map(int* var_map, board_t* board) {
+static bool_t compute_var_map(int* var_map, int* var_count, board_t* board) {
+    bool_t ret = TRUE;
+
     int block_size = board_block_size(board);
     int row, col;
-    int var_count = 0;
+    int count = 0;
 
     int* candidates = checked_calloc(block_size, sizeof(int));
 
@@ -71,16 +77,23 @@ static int compute_var_map(int* var_map, board_t* board) {
             candidate_count =
                 board_gather_candidates(board, row, col, candidates);
 
+            if (!candidate_count) {
+                ret = FALSE;
+                goto cleanup;
+            }
+
             for (i = 0; i < candidate_count; i++) {
                 int val = candidates[i];
-                *var_map_access(var_map, block_size, row, col, val) =
-                    var_count++;
+                *var_map_access(var_map, block_size, row, col, val) = count++;
             }
         }
     }
 
+    *var_count = count;
+
+cleanup:
     free(candidates);
-    return var_count;
+    return ret;
 }
 
 /**
@@ -363,7 +376,11 @@ static lp_status_t lp_solve(lp_env_t env, board_t* board, char var_type,
 
     var_map =
         checked_malloc(block_size * block_size * block_size * sizeof(int));
-    var_count = compute_var_map(var_map, board);
+
+    if (!compute_var_map(var_map, &var_count, board)) {
+        ret = LP_INFEASIBLE;
+        goto cleanup;
+    }
 
     ret = add_vars(model, block_size, var_map, var_type);
     if (ret != LP_SUCCESS) {
@@ -436,11 +453,160 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board) {
     return lp_solve(env, board, GRB_BINARY, ilp_solve_callback, board);
 }
 
+/* Puzzle Generation */
+
+/**
+ * Store the indices of all empty cells in `board` to `cell_indices`, returning
+ * the number of such cells found.
+ */
+static int get_empty_cells(const board_t* board, int* cell_indices) {
+    int block_size = board_block_size(board);
+
+    int count = 0;
+
+    int cell_idx;
+    for (cell_idx = 0; cell_idx < block_size * block_size; cell_idx++) {
+        if (cell_is_empty(&board->cells[cell_idx])) {
+            cell_indices[count++] = cell_idx;
+        }
+    }
+
+    return count;
+}
+
+static void shuffle(int* arr, int size) {
+    int i;
+    for (i = 0; i < size - 1; i++) {
+        int remaining = size - i;
+        int j = rand() % remaining;
+
+        int temp;
+        temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = arr[i];
+    }
+}
+
+/**
+ * Set the specified cell of `board` to a random legal candidate, returning
+ * false if no candidates exist.
+ */
+static bool_t set_random_candidate(board_t* board, int idx) {
+    int ret = TRUE;
+
+    int block_size = board_block_size(board);
+    int* candidates = checked_calloc(block_size, sizeof(int));
+
+    int row = idx / block_size;
+    int col = idx % block_size;
+
+    int candidate_count = board_gather_candidates(board, row, col, candidates);
+    if (!candidate_count) {
+        ret = FALSE;
+        goto cleanup;
+    }
+
+    board->cells[idx].value = candidates[rand() % candidate_count];
+
+cleanup:
+    free(candidates);
+    return ret;
+}
+
+/**
+ * Attempt a single iteration of the ILP generation algorithm.
+ */
+static lp_status_t try_do_gen(lp_env_t env, board_t* board,
+                              int* empty_cell_indices, int empty_cell_count,
+                              int add) {
+    int i;
+
+    shuffle(empty_cell_indices, empty_cell_count);
+
+    for (i = 0; i < add; i++) {
+        if (!set_random_candidate(board, empty_cell_indices[i])) {
+            return LP_INFEASIBLE;
+        }
+    }
+
+    return lp_solve_ilp(env, board);
+}
+
+/**
+ * Clear `count` random cells from `board`.
+ */
+static void clear_random_cells(board_t* board, int count) {
+    int block_size = board_block_size(board);
+    int board_size = block_size * block_size;
+    int* cell_indices = checked_calloc(block_size * block_size, sizeof(int));
+
+    int i;
+    for (i = 0; i < board_size; i++) {
+        cell_indices[i] = i;
+    }
+
+    shuffle(cell_indices, board_size);
+
+    for (i = 0; i < count; i++) {
+        board->cells[cell_indices[i]].value = 0;
+    }
+
+    free(cell_indices);
+}
+
+lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int remove) {
+    lp_gen_status_t ret = GEN_SUCCESS;
+
+    int block_size = board_block_size(board);
+
+    int* empty_cell_indices =
+        checked_calloc(block_size * block_size, sizeof(int));
+    int empty_cell_count = get_empty_cells(board, empty_cell_indices);
+
+    int iter;
+
+    if (empty_cell_count < add) {
+        ret = GEN_TOO_FEW_EMPTY;
+        goto cleanup;
+    }
+
+    for (iter = 0; iter < GEN_MAX_ATTEMPTS; iter++) {
+        lp_status_t attempt_status =
+            try_do_gen(env, board, empty_cell_indices, empty_cell_count, add);
+
+        if (attempt_status == LP_SUCCESS) {
+            break;
+        }
+
+        if (attempt_status == LP_GUROBI_ERR) {
+            ret = GEN_GUROBI_ERR;
+            break;
+        }
+    }
+
+    clear_random_cells(board, remove);
+
+cleanup:
+    free(empty_cell_indices);
+    return ret;
+}
+
 /* Continuous LP */
 
 void lp_cell_candidates_destroy(lp_cell_candidates_t* candidates) {
     free(candidates->candidates);
     memset(candidates, 0, sizeof(lp_cell_candidates_t));
+}
+
+void lp_cell_candidates_array_destroy(lp_cell_candidates_t* candidates,
+                                      int block_size) {
+    int i, j;
+    for (i = 0; i < block_size; i++) {
+        for (j = 0; j < block_size; j++) {
+            lp_cell_candidates_destroy(&candidates[i * block_size + j]);
+        }
+    }
+    free(candidates);
 }
 
 static void candidates_realloc_grow(lp_cell_candidates_t* candidates) {
@@ -479,4 +645,75 @@ lp_status_t lp_solve_continuous(lp_env_t env, board_t* board,
 
     return lp_solve(env, board, GRB_CONTINUOUS, continuous_val_callback,
                     candidate_board);
+}
+
+static lp_candidate_t* random_select(lp_cell_candidates_t* candidates,
+                                     board_t* board, cell_t* cell,
+                                     double thresh) {
+    lp_candidate_t* ret = NULL;
+
+    double total_score = 0;
+    double* cumulative_scores;
+    double cumulative_threshold;
+    int i = 0;
+
+    if (candidates->size == 0) {
+        return NULL;
+    }
+
+    cumulative_scores = checked_calloc(candidates->size, sizeof(double));
+
+    for (; i < candidates->size; i++) {
+        lp_candidate_t can = candidates->candidates[i];
+        int old_val = cell->value;
+
+        cell->value = can.val;
+
+        cumulative_scores[i] = (i == 0 ? 0 : cumulative_scores[i - 1]);
+        if (board_is_legal(board) && can.score >= thresh) {
+            cumulative_scores[i] += can.score;
+        }
+
+        cell->value = old_val;
+    }
+
+    total_score = cumulative_scores[i - 1];
+    if (total_score == 0) {
+        ret = NULL;
+        goto cleanup;
+    }
+
+    cumulative_threshold = (rand() / (double)RAND_MAX) * total_score;
+    i = 0;
+    while (cumulative_threshold > cumulative_scores[i]) {
+        i++;
+    }
+    ret = &candidates->candidates[i];
+
+cleanup:
+    free(cumulative_scores);
+    return ret;
+}
+
+lp_status_t lp_guess_continuous(lp_env_t env, board_t* board, double thresh) {
+    int i, j, block_size = board_block_size(board);
+    lp_cell_candidates_t* candidate_board =
+        checked_calloc(block_size * block_size, sizeof(lp_cell_candidates_t));
+    lp_status_t status = lp_solve_continuous(env, board, candidate_board);
+
+    if (status != LP_SUCCESS)
+        goto cleanup;
+    for (i = 0; i < block_size; i++) {
+        for (j = 0; j < block_size; j++) {
+            lp_candidate_t* can =
+                random_select(&candidate_board[i * block_size + j], board,
+                              board_access(board, i, j), thresh);
+            if (can) {
+                board_access(board, i, j)->value = can->val;
+            }
+        }
+    }
+cleanup:
+    lp_cell_candidates_array_destroy(candidate_board, block_size);
+    return status;
 }
