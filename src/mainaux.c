@@ -172,8 +172,7 @@ static bool_t load_board_from_file(board_t* board, const char* filename) {
     FILE* file = fopen(filename, "r");
 
     if (!file) {
-        char* msg = strerror(errno);
-        print_error("Failed to open file '%s': %s.", filename, msg);
+        print_error("Failed to open file '%s': %s.", filename, strerror(errno));
         return FALSE;
     }
 
@@ -287,6 +286,18 @@ static bool_t validate_board(game_t* game, bool_t* valid) {
     }
 }
 
+/**
+ * Apply `delta` to the game's board, printing it, and store the delta in
+ * history. Ownership of the delta's contents is transferred to the game.
+ */
+static void game_apply_delta(game_t* game, delta_list_t* delta) {
+    delta_list_apply(&game->board, delta, NULL, NULL);
+    history_add_item(&game->history, delta);
+
+    board_mark_errors(&game->board);
+    game_board_print(game);
+}
+
 bool_t command_execute(game_t* game, command_t* command) {
     switch (command->type) {
     case CT_SOLVE: {
@@ -365,11 +376,7 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         delta_list_init(&updates);
         delta_list_add(&updates, row, col, cell->value, val);
-        delta_list_apply(&game->board, &updates, NULL, NULL);
-        history_add_item(&game->history, &updates);
-
-        board_mark_errors(&game->board);
-        game_board_print(game);
+        game_apply_delta(game, &updates);
         break;
     }
     case CT_VALIDATE: {
