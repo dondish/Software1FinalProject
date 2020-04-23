@@ -1,3 +1,7 @@
+/**
+ * list.h - Doubly-linked list implementation, used in history and backtrack.
+ */
+
 #ifndef LIST_H
 #define LIST_H
 

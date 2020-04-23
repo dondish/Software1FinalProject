@@ -1,3 +1,7 @@
+/**
+ * lp.h - Linear programming solvers and validators.
+ */
+
 #ifndef LP_H
 #define LP_H
 

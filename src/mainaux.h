@@ -1,3 +1,7 @@
+/**
+ * mainaux.h - High level TUI helper functions.
+ */
+
 #ifndef MAINAUX_H
 #define MAINAUX_H
 

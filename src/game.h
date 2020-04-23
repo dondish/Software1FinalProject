@@ -1,3 +1,7 @@
+/**
+ * game.h - Game structures and definitions.
+ */
+
 #ifndef GAME_H
 #define GAME_H
 

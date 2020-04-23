@@ -1,3 +1,7 @@
+/**
+ * history.h - Move history storage and application.
+ */
+
 #ifndef HISTORY_H
 #define HISTORY_H
 
