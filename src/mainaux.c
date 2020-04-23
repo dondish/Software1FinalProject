@@ -1,3 +1,8 @@
+/**
+ * Main game/TUI implementation. State updates and TUI output are so intertwined
+ * that we decided against splitting them into separate modules.
+ */
+
 #include "mainaux.h"
 
 #include "backtrack.h"
