@@ -46,7 +46,7 @@ bool_t lp_env_create(lp_env_t* env);
 void lp_env_free(lp_env_t env);
 
 /**
- * Validate `board` in-place using ILP.
+ * Validate `board` using ILP.
  *
  * Note: this function does not check the legality of the board, meaning that
  * the it may still report success when called on an erroneous board (when it
