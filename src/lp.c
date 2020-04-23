@@ -312,9 +312,13 @@ static lp_status_t report_var_values(GRBmodel* model, int block_size,
             for (val = 1; val <= block_size; val++) {
                 int var_idx =
                     *var_map_access(var_map, block_size, row, col, val);
-                double score = var_values[var_idx];
-                if (var_idx != -1 && score > 0.0) {
-                    callback(block_size, row, col, val, score, callback_ctx);
+
+                if (var_idx != -1) {
+                    double score = var_values[var_idx];
+                    if (score > 0.0) {
+                        callback(block_size, row, col, val, score,
+                                 callback_ctx);
+                    }
                 }
             }
         }
