@@ -251,7 +251,7 @@ static bool_t board_is_full(const board_t* board) {
  * Check whether the game board has been solved, printing an appropriate
  * message and switching back to init mode if it has.
  */
-static void check_game_solved(game_t* game) {
+static void game_handle_solved(game_t* game) {
     if (!board_is_full(&game->board)) {
         return;
     }
@@ -276,7 +276,7 @@ static void game_board_after_change(game_t* game) {
     game_board_print(game);
 
     if (game->mode == GM_SOLVE) {
-        check_game_solved(game);
+        game_handle_solved(game);
     }
 }
 
@@ -339,7 +339,7 @@ static void unfix_cells(board_t* board) {
  * Check that the game's board is legal, printing an error if it isn't.
  * Returns whether the board is legal.
  */
-static bool_t check_board_legal(const game_t* game) {
+static bool_t game_verify_board_legal(const game_t* game) {
     if (board_is_legal(&game->board)) {
         return TRUE;
     }
@@ -362,7 +362,7 @@ static bool_t check_board_legal(const game_t* game) {
  * Note: this function does not check the legality of the board. Use
  * `check_board_legal` to do so before calling this function.
  */
-static bool_t validate_board(game_t* game, bool_t* valid) {
+static bool_t game_validate_board(game_t* game, bool_t* valid) {
     switch (lp_validate_ilp(game->lp_env, &game->board)) {
     case LP_SUCCESS:
         *valid = TRUE;
@@ -374,6 +374,43 @@ static bool_t validate_board(game_t* game, bool_t* valid) {
         print_error("Error while invoking Gurobi.");
         return FALSE;
     }
+}
+
+/**
+ * Attempt to solve `board` using the ILP solver. On failure, print an
+ * appropriate error message and return false.
+ */
+static bool_t solve_board(lp_env_t env, board_t* board) {
+    switch (lp_solve_ilp(env, board)) {
+    case LP_SUCCESS:
+        return TRUE;
+    case LP_INFEASIBLE:
+        print_error("Board is not solvable.");
+        return FALSE;
+    case LP_GUROBI_ERR:
+        print_error("Error while invoking Gurobi.");
+        return FALSE;
+    }
+}
+
+/**
+ * Check that `row` and `col` are legal (zero-based) indices for `board`,
+ * printing an error message if they aren't.
+ */
+static bool_t verify_board_indices(const board_t* board, int row, int col) {
+    int block_size = board_block_size(board);
+
+    if (col < 0 || col >= block_size) {
+        print_error("Illegal column value.");
+        return FALSE;
+    }
+
+    if (row < 0 || row >= block_size) {
+        print_error("Illegal row value.");
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 /**
@@ -403,14 +440,14 @@ static void game_apply_delta(game_t* game, delta_list_t* delta,
  * Check that the game board is legal and solvable in preparation for saving
  * from edit mode, printing an appropriate error message if it isn't.
  */
-static bool_t check_save_edit_board(game_t* game) {
+static bool_t game_verify_save_edit_board(game_t* game) {
     bool_t valid;
 
-    if (!check_board_legal(game)) {
+    if (!game_verify_board_legal(game)) {
         return FALSE;
     }
 
-    if (!validate_board(game, &valid)) {
+    if (!game_validate_board(game, &valid)) {
         return FALSE;
     }
 
@@ -454,6 +491,36 @@ static bool_t save_board_to_file(const board_t* board, const char* filename) {
 
     board_serialize(board, file);
     fclose(file);
+    return TRUE;
+}
+
+/**
+ * Check the preconditions for hint commands - row and col point to a legal,
+ * non-fixed, empty cell, printing an error if they aren't met.
+ */
+static bool_t game_verify_can_hint(const game_t* game, int row, int col) {
+    const cell_t* cell;
+
+    if (!game_verify_board_legal(game)) {
+        return FALSE;
+    }
+
+    if (!verify_board_indices(&game->board, row, col)) {
+        return FALSE;
+    }
+
+    cell = board_access_const(&game->board, row, col);
+
+    if (cell_is_fixed(cell)) {
+        print_error("Cannot provide hint for fixed cell");
+        return FALSE;
+    }
+
+    if (!cell_is_empty(cell)) {
+        print_error("Cannot provide hint for non-empty cell");
+        return FALSE;
+    }
+
     return TRUE;
 }
 
@@ -523,8 +590,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         cell_t* cell;
         delta_list_t updates;
 
-        if (col < 0 || col >= block_size || row < 0 || row >= block_size) {
-            print_error("The indices are out of range.");
+        if (!verify_board_indices(&game->board, row, col)) {
             break;
         }
 
@@ -549,11 +615,11 @@ bool_t command_execute(game_t* game, command_t* command) {
     case CT_VALIDATE: {
         bool_t valid;
 
-        if (!check_board_legal(game)) {
+        if (!game_verify_board_legal(game)) {
             break;
         }
 
-        if (!validate_board(game, &valid)) {
+        if (!game_validate_board(game, &valid)) {
             break;
         }
 
@@ -599,7 +665,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         /* In edit mode, the board must be legal and solvable, and will become
          * fixed on save. */
         if (game->mode == GM_EDIT) {
-            if (!check_save_edit_board(game)) {
+            if (!game_verify_save_edit_board(game)) {
                 free(filename);
                 break;
             }
@@ -617,6 +683,26 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         free(filename);
 
+        break;
+    }
+    case CT_HINT: {
+        int col = command->arg.two_int_val.i - 1;
+        int row = command->arg.two_int_val.j - 1;
+
+        board_t solution;
+
+        if (!game_verify_can_hint(game, row, col)) {
+            break;
+        }
+
+        board_clone(&solution, &game->board);
+
+        if (solve_board(game->lp_env, &solution)) {
+            print_success("Set (%d, %d) to %d", col + 1, row + 1,
+                          board_access(&solution, row, col)->value);
+        }
+
+        board_destroy(&solution);
         break;
     }
     case CT_NUM_SOLUTIONS:
