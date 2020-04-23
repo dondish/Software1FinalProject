@@ -26,7 +26,7 @@ lp.o: lp.c lp.h board.h bool.h checked_alloc.h
 main.o: main.c board.h bool.h game.h history.h lp.h mainaux.h parser.h list.h
 	$(CC) $(CFLAGS) -c $*.c
 
-mainaux.o: mainaux.c mainaux.h bool.h game.h parser.h board.h history.h list.h lp.h backtrack.h
+mainaux.o: mainaux.c mainaux.h bool.h game.h parser.h board.h history.h list.h lp.h backtrack.h checked_alloc.h
 	$(CC) $(CFLAGS) -c $*.c
 
 parser.o: parser.c parser.h game.h bool.h checked_alloc.h

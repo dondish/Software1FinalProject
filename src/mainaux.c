@@ -8,6 +8,7 @@
 #include "backtrack.h"
 #include "board.h"
 #include "bool.h"
+#include "checked_alloc.h"
 #include "game.h"
 #include "history.h"
 #include "lp.h"
@@ -362,6 +363,23 @@ static bool_t game_verify_board_legal(const game_t* game) {
 }
 
 /**
+ * Verify that the provided status is successful, printing an error if it isn't.
+ */
+static bool_t verify_lp_status(lp_status_t status) {
+    switch (status) {
+    case LP_SUCCESS:
+        return TRUE;
+    case LP_INFEASIBLE:
+        print_error("Board is not solvable");
+        return FALSE;
+    case LP_GUROBI_ERR:
+        print_error("Error while invoking Gurobi");
+        return FALSE;
+    }
+    return FALSE;
+}
+
+/**
  * Validate the current board using the ILP solver. If an unexpected error
  * occurs in the solver, print an error message and return false. Otherwise,
  * return true and set `valid` appropriately.
@@ -378,26 +396,7 @@ static bool_t game_validate_board(game_t* game, bool_t* valid) {
         *valid = FALSE;
         return TRUE;
     case LP_GUROBI_ERR:
-        print_error("Error while invoking Gurobi.");
-        return FALSE;
-    }
-
-    return FALSE;
-}
-
-/**
- * Attempt to solve `board` using the ILP solver. On failure, print an
- * appropriate error message and return false.
- */
-static bool_t solve_board(lp_env_t env, board_t* board) {
-    switch (lp_solve_ilp(env, board)) {
-    case LP_SUCCESS:
-        return TRUE;
-    case LP_INFEASIBLE:
-        print_error("Board is not solvable.");
-        return FALSE;
-    case LP_GUROBI_ERR:
-        print_error("Error while invoking Gurobi.");
+        verify_lp_status(LP_GUROBI_ERR);
         return FALSE;
     }
 
@@ -665,12 +664,70 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         break;
     }
-    case CT_GUESS:
-        break;
+    case CT_GUESS: {
+        board_t guess;
+        lp_status_t status;
+        delta_list_t list;
+        float thresh = command->arg.float_val;
 
-    case CT_GENERATE:
-        break;
+        if (!game_verify_board_legal(game)) {
+            break;
+        }
 
+        board_clone(&guess, &game->board);
+        status = lp_guess_continuous(game->lp_env, &guess, thresh);
+
+        if (verify_lp_status(status)) {
+            delta_list_set_diff(&list, &game->board, &guess);
+            game_apply_delta(game, &list, FALSE);
+        }
+
+        board_destroy(&guess);
+        break;
+    }
+
+    case CT_GENERATE: {
+        int x = command->arg.two_int_val.i;
+        int y = command->arg.two_int_val.j;
+        int block_size = board_block_size(&game->board);
+        board_t generated;
+        lp_gen_status_t status;
+
+        if (x < 0 || x > block_size * block_size) {
+            print_error("Amount of empty cells is out of range.");
+            break;
+        } else if (y <= 0 || y > block_size * block_size) {
+            print_error("Amount of remaining cells is out of range.");
+            break;
+        }
+
+        board_clone(&generated, &game->board);
+
+        status = lp_gen_ilp(game->lp_env, &generated, x, y);
+
+        switch (status) {
+        case GEN_SUCCESS: {
+            delta_list_t list;
+            delta_list_set_diff(&list, &game->board, &generated);
+            game_apply_delta(game, &list, FALSE);
+            break;
+        }
+        case GEN_MAX_ATTEMPTS:
+            print_error("Reached the maximum amount of attempts (1000).");
+            break;
+
+        case GEN_GUROBI_ERR:
+            print_error("Gurobi failed to solve the board.");
+            break;
+
+        case GEN_TOO_FEW_EMPTY:
+            print_error("Too few empty cells.");
+            break;
+        }
+
+        board_destroy(&generated);
+        break;
+    }
     case CT_UNDO: {
         const delta_list_t* delta = history_undo(&game->history);
         if (!delta) {
@@ -726,6 +783,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         int col = command->arg.two_int_val.i - 1;
         int row = command->arg.two_int_val.j - 1;
 
+        lp_status_t status;
         board_t solution;
 
         if (!game_verify_can_hint(game, row, col)) {
@@ -734,7 +792,9 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         board_clone(&solution, &game->board);
 
-        if (solve_board(game->lp_env, &solution)) {
+        status = lp_solve_ilp(game->lp_env, &solution);
+
+        if (verify_lp_status(status)) {
             print_success("Set (%d, %d) to %d", col + 1, row + 1,
                           board_access(&solution, row, col)->value);
         }
@@ -742,8 +802,46 @@ bool_t command_execute(game_t* game, command_t* command) {
         board_destroy(&solution);
         break;
     }
-    case CT_GUESS_HINT:
+    case CT_GUESS_HINT: {
+        int col = command->arg.two_int_val.i - 1;
+        int row = command->arg.two_int_val.j - 1;
+
+        int block_size = board_block_size(&game->board);
+        int i;
+
+        lp_cell_candidates_t *candidate_board, *candidates;
+        lp_status_t status;
+
+        if (!game_verify_can_hint(game, row, col)) {
+            break;
+        }
+        candidate_board = checked_calloc(block_size * block_size,
+                                         sizeof(lp_cell_candidates_t));
+
+        status =
+            lp_solve_continuous(game->lp_env, &game->board, candidate_board);
+
+        if (!verify_lp_status(status)) {
+            goto cleanup_gh;
+        }
+
+        candidates = &candidate_board[row * block_size + col];
+
+        if (candidates->size == 0) {
+            print_success("No candidates found.");
+        } else {
+            print_success("Available candidates (score):");
+        }
+
+        for (i = 0; i < candidates->size; i++) {
+            lp_candidate_t* candidate = &candidates->candidates[i];
+            print_success("%d (%f)", candidate->val, candidate->score);
+        }
+
+    cleanup_gh:
+        lp_cell_candidates_array_destroy(candidate_board, block_size);
         break;
+    }
 
     case CT_NUM_SOLUTIONS:
         print_success("Number of solutions: %d", num_solutions(&game->board));
