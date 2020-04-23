@@ -373,7 +373,7 @@ static bool_t verify_lp_status(lp_status_t status) {
         print_error("Board is not solvable");
         return FALSE;
     case LP_GUROBI_ERR:
-        print_error("Error while invoking Gurobi");
+        print_error("Failed to invoke Gurobi");
         return FALSE;
     }
     return FALSE;
@@ -717,11 +717,11 @@ bool_t command_execute(game_t* game, command_t* command) {
             break;
 
         case GEN_GUROBI_ERR:
-            print_error("Gurobi failed to solve the board.");
+            verify_lp_status(LP_GUROBI_ERR);
             break;
 
         case GEN_TOO_FEW_EMPTY:
-            print_error("Too few empty cells.");
+            print_error("Board does not contain %d empty cells.", x);
             break;
         }
 
