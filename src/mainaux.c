@@ -609,6 +609,16 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         break;
     }
+    case CT_RESET: {
+        const delta_list_t* delta;
+
+        while ((delta = history_undo(&game->history))) {
+            delta_list_revert(&game->board, delta, NULL);
+        }
+
+        game_board_after_change(game);
+        break;
+    }
     case CT_EXIT: {
         print_success("Exiting...");
         return FALSE;
