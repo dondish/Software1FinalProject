@@ -556,7 +556,7 @@ static void clear_random_cells(board_t* board, int count) {
 }
 
 lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int leave) {
-    lp_gen_status_t ret = GEN_SUCCESS;
+    lp_gen_status_t ret = GEN_MAX_ATTEMPTS;
 
     int block_size = board_block_size(board);
 
@@ -576,6 +576,7 @@ lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int leave) {
             try_do_gen(env, board, empty_cell_indices, empty_cell_count, add);
 
         if (attempt_status == LP_SUCCESS) {
+            ret = GEN_SUCCESS;
             break;
         }
 
