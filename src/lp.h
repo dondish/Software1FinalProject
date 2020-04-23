@@ -53,8 +53,8 @@ void lp_env_free(lp_env_t env);
  * Validate `board` using ILP.
  *
  * Note: this function does not check the legality of the board, meaning that
- * the it may still report success when called on an erroneous board (when it
- * has no conflicting cells to fill in itself).
+ * it may still report success when called on an erroneous board (when it has no
+ * conflicting cells to fill in itself).
  */
 lp_status_t lp_validate_ilp(lp_env_t env, board_t* board);
 
@@ -62,8 +62,8 @@ lp_status_t lp_validate_ilp(lp_env_t env, board_t* board);
  * Attempt to solve `board` in-place using ILP.
  *
  * Note: this function does not check the legality of the board, meaning that
- * the it may still report success when called on an erroneous board (when it
- * has no conflicting cells to fill in itself).
+ * it may still report success when called on an erroneous board (when it has no
+ * conflicting cells to fill in itself).
  */
 lp_status_t lp_solve_ilp(lp_env_t env, board_t* board);
 
@@ -78,8 +78,8 @@ void lp_cell_candidates_destroy(lp_cell_candidates_t* candidates);
  * of the board.
  *
  * Note: this function does not check the legality of the board, meaning that
- * the it may still report success when called on an erroneous board (when it
- * has no conflicting cells to fill in itself).
+ * it may still report success when called on an erroneous board (when it has no
+ * conflicting cells to fill in itself).
  */
 lp_status_t lp_solve_continuous(lp_env_t env, board_t* board,
                                 lp_cell_candidates_t* candidate_board);
