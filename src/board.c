@@ -26,7 +26,7 @@ void board_clone(board_t* dest, const board_t* src) {
     int block_size = board_block_size(src);
 
     board_init(dest, src->m, src->n);
-    memcpy(dest->cells, src->cells, block_size * block_size);
+    memcpy(dest->cells, src->cells, block_size * block_size * sizeof(cell_t));
 }
 
 int board_block_size(const board_t* board) { return board->m * board->n; }
