@@ -151,11 +151,17 @@ void print_parser_error(command_t* cmd, parser_error_codes_t error) {
 /* Command Execution */
 
 /**
- * Print the current game board
+ * Check whether errors should currently be marked when printing the game board.
+ */
+static bool_t should_mark_errors(const game_t* game) {
+    return game->mark_errors || game->mode == GM_EDIT;
+}
+
+/**
+ * Print the current game board.
  */
 static void game_board_print(const game_t* game) {
-    board_print(&game->board, stdout,
-                game->mark_errors || game->mode == GM_EDIT);
+    board_print(&game->board, stdout, should_mark_errors(game));
 }
 
 /**
@@ -238,6 +244,47 @@ static bool_t check_fixed_cells(const board_t* board) {
     board_destroy(&fixed);
 
     return ret;
+}
+
+/**
+ * Check that the game's board is legal, printing an error if it isn't.
+ * Returns whether the board is legal.
+ */
+static bool_t check_board_legal(const game_t* game) {
+    if (board_is_legal(&game->board)) {
+        return TRUE;
+    }
+
+    print_error("Board is illegal.");
+
+    if (!should_mark_errors(game)) {
+        print_success("Note: use `mark_errors 1` to mark conflicting cells on "
+                      "the board.");
+    }
+
+    return FALSE;
+}
+
+/**
+ * Validate the current board using the ILP solver. If an unexpected error
+ * occurs in the solver, print an error message and return false. Otherwise,
+ * return true and set `valid` appropriately.
+ *
+ * Note: this function does not check the legality of the board. Use
+ * `check_board_legal` to do so before calling this function.
+ */
+static bool_t validate_board(game_t* game, bool_t* valid) {
+    switch (lp_validate_ilp(game->lp_env, &game->board)) {
+    case LP_SUCCESS:
+        *valid = TRUE;
+        return TRUE;
+    case LP_INFEASIBLE:
+        *valid = FALSE;
+        return TRUE;
+    case LP_GUROBI_ERR:
+        print_error("Error while invoking Gurobi.");
+        return FALSE;
+    }
 }
 
 bool_t command_execute(game_t* game, command_t* command) {
@@ -326,22 +373,22 @@ bool_t command_execute(game_t* game, command_t* command) {
         break;
     }
     case CT_VALIDATE: {
-        lp_status_t status;
-        board_t copy;
-        if (!board_is_legal(&game->board)) {
-            print_error("The board is erroneous.");
+        bool_t valid;
+
+        if (!check_board_legal(game)) {
             break;
         }
-        board_clone(&copy, &game->board);
-        status = lp_solve_ilp(game->lp_env, &copy);
-        if (status == LP_SUCCESS) {
-            print_success("The board is solveable.");
-        } else if (status == LP_INFEASIBLE) {
-            print_success("The board is unsolveable.");
-        } else {
-            print_error("Gurobi failed to compute the board.");
+
+        if (!validate_board(game, &valid)) {
+            break;
         }
-        board_destroy(&copy);
+
+        if (valid) {
+            print_success("Board is solvable.");
+        } else {
+            print_success("Board is not solvable.");
+        }
+
         break;
     }
     case CT_GUESS: {
