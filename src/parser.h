@@ -74,7 +74,7 @@ typedef struct command_arg_three_int {
 typedef union {
     char* str_val;
     bool_t bool_val;
-    float float_val;
+    double double_val;
     command_arg_two_int_t two_int_val;
     command_arg_three_int_t three_int_val;
 } command_arg_t;

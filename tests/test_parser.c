@@ -354,13 +354,13 @@ static void test_parsing_guess(void) {
     stream = fill_stream(one_arg_guess);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
     assert(cmd.type == CT_GUESS);
-    assert(cmd.arg.float_val == 1);
+    assert(cmd.arg.double_val == 1);
     fclose(stream);
 
     stream = fill_stream(one_arg_guess_float);
     assert(parse_line(stream, &cmd, GM_SOLVE) == P_SUCCESS);
     assert(cmd.type == CT_GUESS);
-    assert(cmd.arg.float_val == 0.5);
+    assert(cmd.arg.double_val == 0.5);
     fclose(stream);
 
     stream = fill_stream(one_arg_guess_wrong);

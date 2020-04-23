@@ -26,7 +26,7 @@ typedef enum {
     PT_STR,
     PT_OPT_STR,
     PT_BOOL,
-    PT_FLOAT,
+    PT_DOUBLE,
     PT_INT2,
     PT_INT3
 } command_arg_type_t;
@@ -131,19 +131,19 @@ static parser_error_codes_t parse_arg_payload(command_arg_type_t type,
         arg->bool_val = (bool_t)val;
         break;
     }
-    case PT_FLOAT: {
+    case PT_DOUBLE: {
         char* str_arg;
-        float val;
+        double val;
 
         if (!extract_arguments(&str_arg, 1)) {
             return P_INVALID_NUM_OF_ARGS;
         }
 
-        if (sscanf(str_arg, "%f", &val) < 1) {
+        if (sscanf(str_arg, "%lf", &val) < 1) {
             return P_INVALID_ARGUMENTS;
         }
 
-        arg->float_val = val;
+        arg->double_val = val;
         break;
     }
     case PT_INT2: {
@@ -206,7 +206,7 @@ parser_error_codes_t parse_line(FILE* stream, command_t* cmd,
         {"print_board", CT_PRINT_BOARD, AM_EDIT | AM_SOLVE, PT_NONE},
         {"set", CT_SET, AM_EDIT | AM_SOLVE, PT_INT3},
         {"validate", CT_VALIDATE, AM_EDIT | AM_SOLVE, PT_NONE},
-        {"guess", CT_GUESS, AM_SOLVE, PT_FLOAT},
+        {"guess", CT_GUESS, AM_SOLVE, PT_DOUBLE},
         {"generate", CT_GENERATE, AM_EDIT, PT_INT2},
         {"undo", CT_UNDO, AM_EDIT | AM_SOLVE, PT_NONE},
         {"redo", CT_REDO, AM_EDIT | AM_SOLVE, PT_NONE},

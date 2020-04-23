@@ -668,7 +668,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         board_t guess;
         lp_status_t status;
         delta_list_t list;
-        float thresh = command->arg.float_val;
+        float thresh = command->arg.double_val;
 
         if (!game_verify_board_legal(game)) {
             break;
