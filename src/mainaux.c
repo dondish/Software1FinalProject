@@ -131,6 +131,34 @@ static void print_usage(command_type_t type) {
     }
 }
 
+/**
+ * Print and error describing the modes in which the specified command is valid.
+ */
+static void print_error_valid_modes(command_type_t type) {
+    static const command_lookup_cell_t command_lookup_table[] = {
+        {CT_SOLVE, "any"},          {CT_EDIT, "any"},
+        {CT_MARK_ERRORS, "solve"},  {CT_PRINT_BOARD, "edit or solve"},
+        {CT_SET, "edit or solve"},  {CT_VALIDATE, "edit or solve"},
+        {CT_GUESS, "solve"},        {CT_GENERATE, "edit"},
+        {CT_UNDO, "edit or solve"}, {CT_REDO, "edit or solve"},
+        {CT_SAVE, "edit or solve"}, {CT_HINT, "solve"},
+        {CT_GUESS_HINT, "solve"},   {CT_NUM_SOLUTIONS, "edit or solve"},
+        {CT_AUTOFILL, "solve"},     {CT_RESET, "edit or solve"},
+        {CT_EXIT, "any"},
+    };
+
+    size_t i;
+    for (i = 0;
+         i < sizeof(command_lookup_table) / sizeof(command_lookup_cell_t);
+         i++) {
+        if (command_lookup_table[i].type == type) {
+            print_error("Command is only available in %s mode.",
+                        command_lookup_table[i].message);
+            return;
+        }
+    }
+}
+
 void print_parser_error(command_t* cmd, parser_error_codes_t error) {
     switch (error) {
     case P_SUCCESS:
@@ -143,7 +171,7 @@ void print_parser_error(command_t* cmd, parser_error_codes_t error) {
         print_error("Command input exceeded maximum length of 256.");
         break;
     case P_INVALID_MODE:
-        print_error("Command is not valid in this mode.");
+        print_error_valid_modes(cmd->type);
         break;
     case P_INVALID_COMMAND_NAME:
         print_error("Invalid command.");
