@@ -243,6 +243,56 @@ void board_mark_errors(board_t* board) {
     free(map);
 }
 
+/* CANDIDATES */
+
+int board_gather_candidates(board_t* board, int row, int col, int* candidates) {
+    cell_t* cell = board_access(board, row, col);
+
+    int block_size = board_block_size(board);
+    int candidate_count = 0;
+
+    int val;
+    for (val = 1; val <= block_size; val++) {
+        cell->value = val;
+        if (board_is_legal(board)) {
+            candidates[candidate_count++] = val;
+        }
+    }
+
+    cell->value = 0;
+
+    return candidate_count;
+}
+
+bool_t board_get_single_candidate(board_t* board, int row, int col,
+                                  int* candidate) {
+    bool_t ret = FALSE;
+
+    int block_size = board_block_size(board);
+    cell_t* cell = board_access(board, row, col);
+
+    int last_candidate = 0;
+
+    int val;
+    for (val = 1; val <= block_size; val++) {
+        cell->value = val;
+        if (board_is_legal(board)) {
+            if (last_candidate) {
+                goto cleanup;
+            } else {
+                last_candidate = val;
+            }
+        }
+    }
+
+    ret = TRUE;
+    *candidate = last_candidate;
+
+cleanup:
+    cell->value = 0;
+    return ret;
+}
+
 /* PRINTING */
 
 static void print_separator_line(int m, int n, FILE* stream) {

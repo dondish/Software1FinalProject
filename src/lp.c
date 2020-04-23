@@ -37,33 +37,6 @@ static int* var_map_access(int* var_map, int block_size, int row, int col,
 }
 
 /**
- * Gather all possible legal values for the specified position on the board,
- * storing them to `candidates`, and return the number of candidates found.
- *
- * Note: the specified cell's contents will be overriden, and it will be emptied
- * when the function returns.
- */
-static int gather_candidates(board_t* board, int row, int col,
-                             int* candidates) {
-    cell_t* cell = board_access(board, row, col);
-
-    int block_size = board_block_size(board);
-    int candidate_count = 0;
-
-    int val;
-    for (val = 1; val <= block_size; val++) {
-        cell->value = val;
-        if (board_is_legal(board)) {
-            candidates[candidate_count++] = val;
-        }
-    }
-
-    cell->value = 0;
-
-    return candidate_count;
-}
-
-/**
  * Set all entries of the specified variable map to -1, indicating no variable.
  */
 static void clear_var_map(int* var_map, int block_size) {
@@ -95,7 +68,8 @@ static int compute_var_map(int* var_map, board_t* board) {
                 continue;
             }
 
-            candidate_count = gather_candidates(board, row, col, candidates);
+            candidate_count =
+                board_gather_candidates(board, row, col, candidates);
 
             for (i = 0; i < candidate_count; i++) {
                 int val = candidates[i];

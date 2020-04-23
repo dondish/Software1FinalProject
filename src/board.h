@@ -103,6 +103,26 @@ bool_t board_is_legal(const board_t* board);
 void board_mark_errors(board_t* board);
 
 /**
+ * Gather all possible legal values for the specified position on the board,
+ * storing them to `candidates`, and return the number of candidates found.
+ * `candidates` should have `block_size` entries, to be safe.
+ *
+ * Note: the specified cell's contents will be overriden, and it will be emptied
+ * when the function returns.
+ */
+int board_gather_candidates(board_t* board, int row, int col, int* candidates);
+
+/**
+ * Check whether the specified position on the board has only a single legal
+ * value, storing it to `candidate` and returning true if so.
+ *
+ * Note: the specified cell's contents will be overriden, and it will be emptied
+ * when the function returns.
+ */
+bool_t board_get_single_candidate(board_t* board, int row, int col,
+                                  int* candidate);
+
+/**
  * Print `board` to `stream` in a human-readable format. If `mark_errors` is
  * true, erroneous cells (those with `CF_ERROR` set) will be printed with an
  * asterisk.
