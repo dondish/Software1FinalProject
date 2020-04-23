@@ -23,6 +23,10 @@ void delta_list_destroy(delta_list_t* list) { free(list->deltas); }
 
 void delta_list_add(delta_list_t* list, int row, int col, int old_val,
                     int new_val) {
+    if (old_val == new_val) {
+        return;
+    }
+
     if (list->size == list->capacity) {
         realloc_grow(list);
     }
@@ -45,6 +49,22 @@ void delta_list_apply(board_t* board, const delta_list_t* list,
         if (callback) {
             callback(list->deltas[i].row, list->deltas[i].col,
                      c->value - list->deltas[i].diff, c->value);
+        }
+    }
+}
+
+void delta_list_set_diff(delta_list_t* list, const board_t* old,
+                         const board_t* new) {
+    int block_size = board_block_size(old);
+    int row, col;
+
+    delta_list_init(list);
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            int old_val = board_access_const(old, row, col)->value;
+            int new_val = board_access_const(new, row, col)->value;
+            delta_list_add(list, row, col, old_val, new_val);
         }
     }
 }

@@ -52,9 +52,21 @@ void delta_list_destroy(delta_list_t* list);
 /**
  * Append a delta representing a change from `old_val` to `new_val` at the
  * specified position.
+ *
+ * Note: this function is a no-op if `old_val` and `new_val` are equal.
  */
 void delta_list_add(delta_list_t* list, int row, int col, int old_val,
                     int new_val);
+
+/**
+ * Initialize `list` to the delta between `old` and `new`. The two boards should
+ * have the same dimensions.
+ *
+ * Note: this function will initialize `list`. If `list` is already initialized,
+ * its existing contents will be leaked.
+ */
+void delta_list_set_diff(delta_list_t* list, const board_t* old,
+                         const board_t* new);
 
 /**
  * Apply the specified delta list to `board`, transitioning from old values to
