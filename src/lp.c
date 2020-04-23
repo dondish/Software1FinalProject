@@ -735,23 +735,29 @@ cleanup:
 }
 
 lp_status_t lp_guess_continuous(lp_env_t env, board_t* board, double thresh) {
-    int i, j, block_size = board_block_size(board);
+    int block_size = board_block_size(board);
+    int row;
+    int col;
+
     lp_cell_candidates_t* candidate_board =
         checked_calloc(block_size * block_size, sizeof(lp_cell_candidates_t));
+
     lp_status_t status = lp_solve_continuous(env, board, candidate_board);
 
     if (status != LP_SUCCESS)
         goto cleanup;
-    for (i = 0; i < block_size; i++) {
-        for (j = 0; j < block_size; j++) {
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
             lp_candidate_t* can =
-                random_select(&candidate_board[i * block_size + j], board,
-                              board_access(board, i, j), thresh);
+                random_select(&candidate_board[row * block_size + col], board,
+                              board_access(board, row, col), thresh);
             if (can) {
-                board_access(board, i, j)->value = can->val;
+                board_access(board, row, col)->value = can->val;
             }
         }
     }
+
 cleanup:
     lp_cell_candidates_array_destroy(candidate_board, block_size);
     return status;
