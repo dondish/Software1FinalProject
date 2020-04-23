@@ -9,6 +9,7 @@
 #include "parser.h"
 #include <errno.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -376,21 +377,26 @@ static bool_t validate_board(game_t* game, bool_t* valid) {
 }
 
 /**
- * Apply `delta` to the game's board, printing it, and store the delta in
- * history. Ownership of the delta's contents is transferred to the game.
- */
-static void game_apply_delta(game_t* game, delta_list_t* delta) {
-    delta_list_apply(&game->board, delta, NULL);
-    history_add_item(&game->history, delta);
-
-    game_board_after_change(game);
-}
-
-/**
  * Delta application callback that prints the current change to the user.
  */
 static void user_notify_delta_callback(int row, int col, int old, int new) {
     print_success("(%d, %d): %d -> %d", col + 1, row + 1, old, new);
+}
+
+/**
+ * Apply `delta` to the game's board, printing it, and store the delta in
+ * history. Ownership of the delta's contents is transferred to the game.
+ *
+ * If `print_changes` is true, the changes will be printed to the user as they
+ * are applied.
+ */
+static void game_apply_delta(game_t* game, delta_list_t* delta,
+                             bool_t print_changes) {
+    delta_list_apply(&game->board, delta,
+                     print_changes ? user_notify_delta_callback : NULL);
+    history_add_item(&game->history, delta);
+
+    game_board_after_change(game);
 }
 
 /**
@@ -527,16 +533,16 @@ bool_t command_execute(game_t* game, command_t* command) {
             break;
         }
 
-        if (cell_is_fixed(board_access(&game->board, row, col))) {
+        cell = board_access(&game->board, row, col);
+
+        if (cell_is_fixed(cell)) {
             print_error("This cell is fixed and cannot be updated.");
             break;
         }
 
-        cell = board_access(&game->board, row, col);
-
         delta_list_init(&updates);
         delta_list_add(&updates, row, col, cell->value, val);
-        game_apply_delta(game, &updates);
+        game_apply_delta(game, &updates, FALSE);
 
         break;
     }
@@ -634,5 +640,6 @@ bool_t command_execute(game_t* game, command_t* command) {
     default:
         break;
     }
+
     return TRUE;
 }
