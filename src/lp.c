@@ -564,16 +564,25 @@ lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int leave) {
         checked_calloc(block_size * block_size, sizeof(int));
     int empty_cell_count = get_empty_cells(board, empty_cell_indices);
 
+    board_t tmp;
+
     int iter;
 
     if (empty_cell_count < add) {
         ret = GEN_TOO_FEW_EMPTY;
-        goto cleanup;
+        goto cleanup_cell_indices;
     }
 
+    board_init(&tmp, board->m, board->n);
+
     for (iter = 0; iter < GEN_MAX_ATTEMPTS; iter++) {
-        lp_status_t attempt_status =
-            try_do_gen(env, board, empty_cell_indices, empty_cell_count, add);
+        lp_status_t attempt_status;
+
+        memcpy(tmp.cells, board->cells,
+               block_size * block_size * sizeof(cell_t));
+
+        attempt_status =
+            try_do_gen(env, &tmp, empty_cell_indices, empty_cell_count, add);
 
         if (attempt_status == LP_SUCCESS) {
             ret = GEN_SUCCESS;
@@ -582,13 +591,16 @@ lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int leave) {
 
         if (attempt_status == LP_GUROBI_ERR) {
             ret = GEN_GUROBI_ERR;
-            break;
+            goto cleanup_tmp;
         }
     }
 
+    memcpy(board->cells, tmp.cells, block_size * block_size * sizeof(cell_t));
     clear_random_cells(board, block_size * block_size - leave);
 
-cleanup:
+cleanup_tmp:
+    board_destroy(&tmp);
+cleanup_cell_indices:
     free(empty_cell_indices);
     return ret;
 }
