@@ -650,9 +650,23 @@ lp_status_t lp_solve_continuous(lp_env_t env, board_t* board,
 }
 
 /**
- * Select a random, legal candidate from `candidates` whose score is at least
- * `thresh`. The probability of each candidate being drawn is proportional to
- * its score.
+ * Check whether `val` is legal for `cell`.
+ */
+static bool_t is_value_legal(board_t* board, cell_t* cell, int val) {
+    int old_val = cell->value;
+    bool_t ret;
+
+    cell->value = val;
+    ret = board_is_legal(board);
+    cell->value = old_val;
+
+    return ret;
+}
+
+/**
+ * Select a random, legal candidate from `candidates` whose score is at
+ * least `thresh`. The probability of each candidate being drawn is
+ * proportional to its score.
  */
 static lp_candidate_t* random_select(lp_cell_candidates_t* candidates,
                                      board_t* board, cell_t* cell,
@@ -660,44 +674,62 @@ static lp_candidate_t* random_select(lp_cell_candidates_t* candidates,
     lp_candidate_t* ret = NULL;
 
     double total_score = 0;
+
     double* cumulative_scores;
+
+    /* These point into the list of candidates */
+    lp_candidate_t** viable_candidates;
+    int viable_count = 0;
+
     double cumulative_threshold;
     int i = 0;
 
-    if (candidates->size == 0) {
+    if (!candidates->size) {
         return NULL;
     }
 
     cumulative_scores = checked_calloc(candidates->size, sizeof(double));
+    viable_candidates =
+        checked_calloc(candidates->size, sizeof(lp_candidate_t*));
 
     for (; i < candidates->size; i++) {
-        lp_candidate_t can = candidates->candidates[i];
-        int old_val = cell->value;
+        lp_candidate_t* can = &candidates->candidates[i];
 
-        cell->value = can.val;
-
-        cumulative_scores[i] = (i == 0 ? 0 : cumulative_scores[i - 1]);
-        if (board_is_legal(board) && can.score >= thresh) {
-            cumulative_scores[i] += can.score;
+        if (can->score < thresh || !is_value_legal(board, cell, can->val)) {
+            continue;
         }
 
-        cell->value = old_val;
+        /* This candidate is legal, remember it. */
+        viable_candidates[viable_count] = can;
+        cumulative_scores[viable_count] =
+            (viable_count == 0 ? 0 : cumulative_scores[viable_count - 1]) +
+            can->score;
+        viable_count++;
     }
 
-    total_score = cumulative_scores[i - 1];
-    if (total_score == 0) {
-        ret = NULL;
+    if (!viable_count) {
         goto cleanup;
     }
 
+    total_score = cumulative_scores[viable_count - 1];
+
+    /* In order to select based on score, begin by selecting a threshold in
+     * [0, total_score]...
+     */
     cumulative_threshold = (rand() / (double)RAND_MAX) * total_score;
+
+    /* ...and find the first range that contains it (this loop is correct as
+     * `cumulative_scores` are strictly increasing and we know that
+     * `cumulative_threshold` is bounded by the last one). */
     i = 0;
     while (cumulative_threshold > cumulative_scores[i]) {
         i++;
     }
-    ret = &candidates->candidates[i];
+
+    ret = viable_candidates[i];
 
 cleanup:
+    free(viable_candidates);
     free(cumulative_scores);
     return ret;
 }
