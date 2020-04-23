@@ -165,18 +165,36 @@ static void game_board_print(const game_t* game) {
 }
 
 /**
- * Attempt to load `board` from the specified filename, displaying any errors to
+ * Attempt to open `filename` in the specified mode, printing error messages to
  * the user.
  */
-static bool_t load_board_from_file(board_t* board, const char* filename) {
-    FILE* file = fopen(filename, "r");
+static FILE* open_file(const char* filename, const char* mode) {
+    FILE* file = fopen(filename, mode);
 
     if (!file) {
         print_error("Failed to open file '%s': %s.", filename, strerror(errno));
         return FALSE;
     }
 
-    switch (board_deserialize(board, file)) {
+    return file;
+}
+
+/**
+ * Attempt to load `board` from the specified filename, displaying any errors to
+ * the user.
+ */
+static bool_t load_board_from_file(board_t* board, const char* filename) {
+    deserialize_status_t status;
+    FILE* file = open_file(filename, "r");
+
+    if (!file) {
+        return FALSE;
+    }
+
+    status = board_deserialize(board, file);
+    fclose(file);
+
+    switch (status) {
     case DS_OK:
         return TRUE;
     case DS_ERR_FMT:
@@ -296,9 +314,9 @@ static bool_t check_fixed_cells(const board_t* board) {
 }
 
 /**
- * Set the flags of all cells on the board to `flags`.
+ * Reset the flags of any fixed cells on the board.
  */
-static void set_cell_flags(board_t* board, cell_flags_t flags) {
+static void unfix_cells(board_t* board) {
     int block_size = board_block_size(board);
 
     int row;
@@ -306,7 +324,10 @@ static void set_cell_flags(board_t* board, cell_flags_t flags) {
 
     for (row = 0; row < block_size; row++) {
         for (col = 0; col < block_size; col++) {
-            board_access(board, row, col)->flags = flags;
+            cell_t* cell = board_access(board, row, col);
+            if (cell_is_fixed(cell)) {
+                board_access(board, row, col)->flags = CF_NONE;
+            }
         }
     }
 }
@@ -370,6 +391,64 @@ static void user_notify_delta_callback(int row, int col, int old, int new) {
     print_success("(%d, %d): %d -> %d", col + 1, row + 1, old, new);
 }
 
+/**
+ * Check that the game board is legal and solvable in preparation for saving
+ * from edit mode, printing an appropriate error message if it isn't.
+ */
+static bool_t check_save_edit_board(game_t* game) {
+    bool_t valid;
+
+    if (!check_board_legal(game)) {
+        return FALSE;
+    }
+
+    if (!validate_board(game, &valid)) {
+        return FALSE;
+    }
+
+    if (!valid) {
+        print_error("Board is not solvable.");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ * Mark any nonempty cells in `board` as fixed.
+ */
+static void fix_nonempty_cells(board_t* board) {
+    int block_size = board_block_size(board);
+
+    int row;
+    int col;
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            cell_t* cell = board_access(board, row, col);
+
+            if (!cell_is_empty(cell)) {
+                cell->flags = CF_FIXED;
+            }
+        }
+    }
+}
+
+/**
+ * Attempt to save `board` to `filename`, printing a message on error.
+ */
+static bool_t save_board_to_file(const board_t* board, const char* filename) {
+    FILE* file = open_file(filename, "w");
+
+    if (!file) {
+        return FALSE;
+    }
+
+    board_serialize(board, file);
+    fclose(file);
+    return TRUE;
+}
+
 bool_t command_execute(game_t* game, command_t* command) {
     switch (command->type) {
     case CT_SOLVE: {
@@ -406,7 +485,7 @@ bool_t command_execute(game_t* game, command_t* command) {
             }
 
             /* Fixed cells have no meaning here. */
-            set_cell_flags(&board, CF_NONE);
+            unfix_cells(&board);
         } else {
             board_init(&board, 3, 3);
         }
@@ -500,6 +579,33 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         delta_list_apply(&game->board, delta, user_notify_delta_callback);
         game_board_after_change(game);
+
+        break;
+    }
+    case CT_SAVE: {
+        char* filename = command->arg.str_val;
+        bool_t succeeded;
+
+        /* In edit mode, the board must be legal and solvable, and will become
+         * fixed on save. */
+        if (game->mode == GM_EDIT) {
+            if (!check_save_edit_board(game)) {
+                free(filename);
+                break;
+            }
+
+            fix_nonempty_cells(&game->board);
+            succeeded = save_board_to_file(&game->board, filename);
+            unfix_cells(&game->board);
+        } else {
+            succeeded = save_board_to_file(&game->board, filename);
+        }
+
+        if (succeeded) {
+            print_success("Saved board to '%s'.", filename);
+        }
+
+        free(filename);
 
         break;
     }
