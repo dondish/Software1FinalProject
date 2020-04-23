@@ -535,6 +535,28 @@ static bool_t game_verify_can_hint(const game_t* game, int row, int col) {
     return TRUE;
 }
 
+/**
+ * Add all empty cells that only have a single legal value to `delta` (setting
+ * them to their legal value).
+ */
+static void add_autofill_candidates(delta_list_t* delta, board_t* board) {
+    int block_size = board_block_size(board);
+
+    int row;
+    int col;
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            if (cell_is_empty(board_access(board, row, col))) {
+                int candidate;
+                if (board_get_single_candidate(board, row, col, &candidate)) {
+                    delta_list_add(delta, row, col, 0, candidate);
+                }
+            }
+        }
+    }
+}
+
 bool_t command_execute(game_t* game, command_t* command) {
     switch (command->type) {
     case CT_SOLVE: {
@@ -642,9 +664,12 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         break;
     }
-    case CT_GUESS: {
+    case CT_GUESS:
         break;
-    }
+
+    case CT_GENERATE:
+        break;
+
     case CT_UNDO: {
         const delta_list_t* delta = history_undo(&game->history);
         if (!delta) {
@@ -716,9 +741,20 @@ bool_t command_execute(game_t* game, command_t* command) {
         board_destroy(&solution);
         break;
     }
+    case CT_GUESS_HINT:
+        break;
+
     case CT_NUM_SOLUTIONS:
         print_success("Number of solutions: %d", num_solutions(&game->board));
         break;
+
+    case CT_AUTOFILL: {
+        delta_list_t delta;
+        delta_list_init(&delta);
+        add_autofill_candidates(&delta, &game->board);
+        game_apply_delta(game, &delta, TRUE);
+        break;
+    }
 
     case CT_RESET: {
         const delta_list_t* delta;
@@ -733,9 +769,6 @@ bool_t command_execute(game_t* game, command_t* command) {
     case CT_EXIT:
         print_success("Exiting...");
         return FALSE;
-
-    default:
-        break;
     }
 
     return TRUE;
