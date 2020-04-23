@@ -165,14 +165,6 @@ static void game_board_print(const game_t* game) {
 }
 
 /**
- * Print the current game board, assuming it has changed.
- */
-static void game_board_print_after_change(game_t* game) {
-    board_mark_errors(&game->board);
-    game_board_print(game);
-}
-
-/**
  * Attempt to load `board` from the specified filename, displaying any errors to
  * the user.
  */
@@ -200,7 +192,7 @@ static bool_t load_board_from_file(board_t* board, const char* filename) {
 
 /**
  * Update the game mode to the specified mode, clearing history and replacing
- * and printing the board.
+ * the board.
  */
 static void enter_game_mode(game_t* game, game_mode_t mode, board_t* board) {
     game->mode = mode;
@@ -212,7 +204,59 @@ static void enter_game_mode(game_t* game, game_mode_t mode, board_t* board) {
     memset(board, 0, sizeof(board_t));
 
     print_success("Entering %s mode...", game_mode_to_str(mode));
-    game_board_print_after_change(game);
+}
+
+/**
+ * Check whether `board` is full.
+ */
+static bool_t board_is_full(const board_t* board) {
+    int block_size = board_block_size(board);
+
+    int row;
+    int col;
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            if (cell_is_empty(board_access_const(board, row, col))) {
+                return FALSE;
+            }
+        }
+    }
+
+    return TRUE;
+}
+
+/**
+ * Check whether the game board has been solved, printing an appropriate
+ * message and switching back to init mode if it has.
+ */
+static void check_game_solved(game_t* game) {
+    if (!board_is_full(&game->board)) {
+        return;
+    }
+
+    if (board_is_legal(&game->board)) {
+        board_t dummy = {0}; /* Note: board_destroy on this is a no-op */
+
+        print_success("Puzzle solved successfully!");
+        enter_game_mode(game, GM_INIT, &dummy);
+    } else {
+        print_success("Puzzle solution is incorrect.");
+    }
+}
+
+/**
+ * Call this after processing a command that may have changed the board -
+ * re-mark and reprint the board, notify the user if they have solved the puzzle
+ * in solve mode.
+ */
+static void game_board_after_change(game_t* game) {
+    board_mark_errors(&game->board);
+    game_board_print(game);
+
+    if (game->mode == GM_SOLVE) {
+        check_game_solved(game);
+    }
 }
 
 /**
@@ -300,7 +344,7 @@ static void game_apply_delta(game_t* game, delta_list_t* delta) {
     delta_list_apply(&game->board, delta, NULL);
     history_add_item(&game->history, delta);
 
-    game_board_print_after_change(game);
+    game_board_after_change(game);
 }
 
 /**
@@ -329,6 +373,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         }
 
         enter_game_mode(game, GM_SOLVE, &board);
+        game_board_after_change(game);
 
         break;
     }
@@ -348,6 +393,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         }
 
         enter_game_mode(game, GM_EDIT, &board);
+        game_board_after_change(game);
 
         break;
     }
@@ -422,7 +468,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         }
 
         delta_list_revert(&game->board, delta, user_notify_delta_callback);
-        game_board_print_after_change(game);
+        game_board_after_change(game);
 
         break;
     }
@@ -434,7 +480,7 @@ bool_t command_execute(game_t* game, command_t* command) {
         }
 
         delta_list_apply(&game->board, delta, user_notify_delta_callback);
-        game_board_print_after_change(game);
+        game_board_after_change(game);
 
         break;
     }
