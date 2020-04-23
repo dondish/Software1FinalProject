@@ -83,6 +83,23 @@ static int compute_var_map(int* var_map, board_t* board) {
     return var_count;
 }
 
+/**
+ * Count the number of candidates for the specified position, based on
+ * `var_map`.
+ */
+static int count_candidates(int* var_map, int block_size, int row, int col) {
+    int count = 0;
+
+    int val;
+    for (val = 1; val <= block_size; val++) {
+        if (*var_map_access(var_map, block_size, row, col, val) != -1) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
 /*
  * Abstraction for a function that can retrieve a value from the variable map
  * based on three indices (two "contexts" and one "local offset", all in the
@@ -232,15 +249,36 @@ cleanup:
 }
 
 /**
- * Add `count` variables of the specified type to `model`, constraining them to
- * `[0, 1]`.
+ * Add variables of the specified type to `model` based on `var_map`,
+ * constraining them to `[0, 1]`. The objective function will be set to favor
+ * placing values in cells with fewer candidates, which has the effect of making
+ * the model more "confident" about values in cells with few candidates.
  */
-static lp_status_t add_vars(GRBmodel* model, int count, char var_type) {
-    int i;
-    for (i = 0; i < count; i++) {
-        if (GRBaddvar(model, 0, NULL, NULL, 0.0, 0.0, 1.0, var_type, NULL)) {
-            return LP_GUROBI_ERR;
+static lp_status_t add_vars(GRBmodel* model, int block_size, int* var_map,
+                            char var_type) {
+    int row;
+    int col;
+
+    for (row = 0; row < block_size; row++) {
+        for (col = 0; col < block_size; col++) {
+            int candidate_count =
+                count_candidates(var_map, block_size, row, col);
+
+            int i;
+            for (i = 0; i < candidate_count; i++) {
+                /* Weight each variable for this cell with `candidate_count` in
+                 * the objective function, which, as we are minimizing, will
+                 * cause Gurobi to favor cells with fewer candidates. */
+                if (GRBaddvar(model, 0, NULL, NULL, candidate_count, 0.0, 1.0,
+                              var_type, NULL)) {
+                    return LP_GUROBI_ERR;
+                }
+            }
         }
+    }
+
+    if (GRBsetintattr(model, GRB_INT_ATTR_MODELSENSE, GRB_MINIMIZE)) {
+        return LP_GUROBI_ERR;
     }
 
     if (GRBupdatemodel(model)) {
@@ -327,7 +365,7 @@ static lp_status_t lp_solve(lp_env_t env, board_t* board, char var_type,
         checked_malloc(block_size * block_size * block_size * sizeof(int));
     var_count = compute_var_map(var_map, board);
 
-    ret = add_vars(model, var_count, var_type);
+    ret = add_vars(model, block_size, var_map, var_type);
     if (ret != LP_SUCCESS) {
         goto cleanup;
     }
@@ -407,15 +445,15 @@ void lp_cell_candidates_destroy(lp_cell_candidates_t* candidates) {
 
 static void candidates_realloc_grow(lp_cell_candidates_t* candidates) {
     candidates->capacity = candidates->capacity * 2 + 1;
-    candidates->candidates =
-        checked_realloc(candidates->candidates, candidates->capacity);
+    candidates->candidates = checked_realloc(
+        candidates->candidates, candidates->capacity * sizeof(lp_candidate_t));
 }
 
 /**
  * Append the specified scored value to the candidate list.
  */
 static void candidates_add(lp_cell_candidates_t* candidates, int val,
-                           int score) {
+                           double score) {
     if (candidates->size == candidates->capacity) {
         candidates_realloc_grow(candidates);
     }

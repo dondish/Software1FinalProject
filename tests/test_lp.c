@@ -2,6 +2,7 @@
 
 #include "board.h"
 #include <assert.h>
+#include <stdio.h>
 
 #define VAL(row, col) board_access(&board, row, col)->value
 
@@ -11,9 +12,30 @@ int main() {
     int block_size;
     int i, j;
 
-    board_init(&board, 4, 4);
-    board_access(&board, 0, 0)->value = 1;
+    lp_cell_candidates_t candidate_board[81];
+
+    board_init(&board, 3, 3);
+    block_size = board_block_size(&board);
+
+    VAL(0, 0) = 1;
+    VAL(5, 7) = 3;
+
     assert(lp_env_create(&env));
+
+    assert(lp_solve_continuous(env, &board, candidate_board) == LP_SUCCESS);
+    for (i = 0; i < block_size; i++) {
+        for (j = 0; j < block_size; j++) {
+            int k;
+            lp_cell_candidates_t* candidates =
+                &candidate_board[i * block_size + j];
+
+            for (k = 0; k < candidates->size; k++) {
+                fprintf(stderr, "(%d, %d): %d (%f)\n", i, j,
+                        candidates->candidates[k].val,
+                        candidates->candidates[k].score);
+            }
+        }
+    }
 
     assert(lp_validate_ilp(env, &board) == LP_SUCCESS);
     assert(lp_solve_ilp(env, &board) == LP_SUCCESS);
@@ -21,7 +43,6 @@ int main() {
     board_print(&board, stderr, FALSE);
     assert(board_is_legal(&board));
 
-    block_size = board_block_size(&board);
     for (i = 0; i < block_size; i++) {
         for (j = 0; j < block_size; j++) {
             assert(!cell_is_empty(board_access(&board, i, j)));
