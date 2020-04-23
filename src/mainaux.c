@@ -1,5 +1,6 @@
 #include "mainaux.h"
 
+#include "backtrack.h"
 #include "board.h"
 #include "bool.h"
 #include "game.h"
@@ -495,14 +496,14 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         break;
     }
-    case CT_MARK_ERRORS: {
+    case CT_MARK_ERRORS:
         game->mark_errors = command->arg.bool_val;
         break;
-    }
-    case CT_PRINT_BOARD: {
+
+    case CT_PRINT_BOARD:
         game_board_print(game);
         break;
-    }
+
     case CT_SET: {
         int block_size = board_block_size(&game->board);
 
@@ -609,6 +610,10 @@ bool_t command_execute(game_t* game, command_t* command) {
 
         break;
     }
+    case CT_NUM_SOLUTIONS:
+        print_success("Number of solutions: %d", num_solutions(&game->board));
+        break;
+
     case CT_RESET: {
         const delta_list_t* delta;
 
@@ -619,10 +624,10 @@ bool_t command_execute(game_t* game, command_t* command) {
         game_board_after_change(game);
         break;
     }
-    case CT_EXIT: {
+    case CT_EXIT:
         print_success("Exiting...");
         return FALSE;
-    }
+
     default:
         break;
     }
