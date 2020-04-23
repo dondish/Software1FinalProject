@@ -6,7 +6,7 @@
 #define PARSER_H
 
 #include "bool.h"
-#include <game.h>
+#include "game.h"
 #include <stdio.h>
 
 typedef enum command_type {
