@@ -37,8 +37,7 @@ typedef struct history {
  * Note that `old_val` in this context always represents the value before the
  * operation, while `new_val` represents the value after the operation.
  */
-typedef void (*delta_callback_t)(int row, int col, int old_val, int new_val,
-                                 void* ctx);
+typedef void (*delta_callback_t)(int row, int col, int old_val, int new_val);
 
 /**
  * Initialize a new, empty delta list with a capacity of 1.
@@ -65,7 +64,7 @@ void delta_list_add(delta_list_t* list, int row, int col, int old_val,
  * creating the delta list, values may be updated incorrectly.
  */
 void delta_list_apply(board_t* board, const delta_list_t* list,
-                      delta_callback_t callback, void* ctx);
+                      delta_callback_t callback);
 
 /**
  * Revert the specified delta list to `board`, transitioning from new values to
@@ -75,7 +74,7 @@ void delta_list_apply(board_t* board, const delta_list_t* list,
  * creating the delta list, values may be updated incorrectly.
  */
 void delta_list_revert(board_t* board, const delta_list_t* list,
-                       delta_callback_t callback, void* ctx);
+                       delta_callback_t callback);
 
 /**
  * Initialize a new, empty history.

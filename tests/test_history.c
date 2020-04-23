@@ -25,9 +25,7 @@ static void test_delta_list_add(void) {
     assert(list.deltas[1].diff == -5);
 }
 
-static void debug_printer_callback(int row, int col, int old_val, int new_val,
-                                   void* ctx) {
-    (void)ctx;
+static void debug_printer_callback(int row, int col, int old_val, int new_val) {
     fprintf(stderr, "(%d, %d): %d -> %d\n", row, col, old_val, new_val);
 }
 
@@ -44,12 +42,12 @@ static void test_delta_list_apply_revert(void) {
     delta_list_add(&delta, 0, 2, 5, 2);
     delta_list_add(&delta, 1, 3, 0, 2);
 
-    delta_list_apply(&board, &delta, debug_printer_callback, NULL);
+    delta_list_apply(&board, &delta, debug_printer_callback);
     assert(board_access(&board, 0, 0)->value == 7);
     assert(board_access(&board, 0, 2)->value == 2);
     assert(board_access(&board, 1, 3)->value == 2);
 
-    delta_list_revert(&board, &delta, debug_printer_callback, NULL);
+    delta_list_revert(&board, &delta, debug_printer_callback);
     assert(board_access(&board, 0, 0)->value == 3);
     assert(board_access(&board, 0, 2)->value == 5);
     assert(board_access(&board, 1, 3)->value == 0);

@@ -291,7 +291,7 @@ static bool_t validate_board(game_t* game, bool_t* valid) {
  * history. Ownership of the delta's contents is transferred to the game.
  */
 static void game_apply_delta(game_t* game, delta_list_t* delta) {
-    delta_list_apply(&game->board, delta, NULL, NULL);
+    delta_list_apply(&game->board, delta, NULL);
     history_add_item(&game->history, delta);
 
     board_mark_errors(&game->board);

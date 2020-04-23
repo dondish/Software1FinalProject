@@ -34,7 +34,7 @@ void delta_list_add(delta_list_t* list, int row, int col, int old_val,
 }
 
 void delta_list_apply(board_t* board, const delta_list_t* list,
-                      delta_callback_t callback, void* ctx) {
+                      delta_callback_t callback) {
     int i;
     for (i = 0; i < list->size; i++) {
         cell_t* c =
@@ -44,13 +44,13 @@ void delta_list_apply(board_t* board, const delta_list_t* list,
 
         if (callback) {
             callback(list->deltas[i].row, list->deltas[i].col,
-                     c->value - list->deltas[i].diff, c->value, ctx);
+                     c->value - list->deltas[i].diff, c->value);
         }
     }
 }
 
 void delta_list_revert(board_t* board, const delta_list_t* list,
-                       delta_callback_t callback, void* ctx) {
+                       delta_callback_t callback) {
     int i;
     for (i = 0; i < list->size; i++) {
         cell_t* c =
@@ -60,7 +60,7 @@ void delta_list_revert(board_t* board, const delta_list_t* list,
 
         if (callback) {
             callback(list->deltas[i].row, list->deltas[i].col,
-                     c->value + list->deltas[i].diff, c->value, ctx);
+                     c->value + list->deltas[i].diff, c->value);
         }
     }
 }
