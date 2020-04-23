@@ -74,6 +74,8 @@ static const char* game_mode_to_str(game_mode_t mode) {
     case GM_SOLVE:
         return "solve";
     }
+
+    return "";
 }
 
 void print_prompt(game_t* game) {
@@ -374,6 +376,8 @@ static bool_t game_validate_board(game_t* game, bool_t* valid) {
         print_error("Error while invoking Gurobi.");
         return FALSE;
     }
+
+    return FALSE;
 }
 
 /**
@@ -391,6 +395,8 @@ static bool_t solve_board(lp_env_t env, board_t* board) {
         print_error("Error while invoking Gurobi.");
         return FALSE;
     }
+
+    return FALSE;
 }
 
 /**
