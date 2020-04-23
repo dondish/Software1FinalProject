@@ -203,6 +203,22 @@ static void test_board_deserialize_err_fmt(void) {
         "4 5\t6 1 . 2 3\n"
         "5 6 1 2 3 4"
         "  6 1 2 3 4 5\n",
+
+        "3 2\n" /* junk at end of file */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 6 1. 2\n"
+        "4 5\t6 1. 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 3 4 5 asdk\n",
+
+        "3 2\n" /* too many values */
+        "1 2 3 4 5 6\n"
+        "2 3 4   5 6 1\n"
+        "3 4 5 6 1. 2\n"
+        "4 5\t6 1. 2 3\n"
+        "5 6 1 2 3 4"
+        "  6 1 2 3 4 5 7\n",
     };
 
     size_t i;

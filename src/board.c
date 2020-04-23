@@ -359,6 +359,8 @@ deserialize_status_t board_deserialize(board_t* board, FILE* stream) {
     int row;
     int col;
 
+    char c;
+
     if (fscanf(stream, "%d %d", &m, &n) < 2) {
         return handle_scanf_err(stream);
     }
@@ -381,6 +383,12 @@ deserialize_status_t board_deserialize(board_t* board, FILE* stream) {
                 return cell_status;
             }
         }
+    }
+
+    /* Check for additional content beyond end of file. */
+    if (fscanf(stream, " %c", &c) > 0) {
+        board_destroy(board);
+        return DS_ERR_FMT;
     }
 
     return DS_OK;
