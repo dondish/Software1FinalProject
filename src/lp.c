@@ -483,7 +483,7 @@ static void shuffle(int* arr, int size) {
         int temp;
         temp = arr[i];
         arr[i] = arr[j];
-        arr[j] = arr[i];
+        arr[j] = temp;
     }
 }
 
@@ -538,6 +538,7 @@ static lp_status_t try_do_gen(lp_env_t env, board_t* board,
 static void clear_random_cells(board_t* board, int count) {
     int block_size = board_block_size(board);
     int board_size = block_size * block_size;
+
     int* cell_indices = checked_calloc(block_size * block_size, sizeof(int));
 
     int i;
@@ -554,7 +555,7 @@ static void clear_random_cells(board_t* board, int count) {
     free(cell_indices);
 }
 
-lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int remove) {
+lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int leave) {
     lp_gen_status_t ret = GEN_SUCCESS;
 
     int block_size = board_block_size(board);
@@ -584,7 +585,7 @@ lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int remove) {
         }
     }
 
-    clear_random_cells(board, remove);
+    clear_random_cells(board, block_size * block_size - leave);
 
 cleanup:
     free(empty_cell_indices);
@@ -647,6 +648,11 @@ lp_status_t lp_solve_continuous(lp_env_t env, board_t* board,
                     candidate_board);
 }
 
+/**
+ * Select a random, legal candidate from `candidates` whose score is at least
+ * `thresh`. The probability of each candidate being drawn is proportional to
+ * its score.
+ */
 static lp_candidate_t* random_select(lp_cell_candidates_t* candidates,
                                      board_t* board, cell_t* cell,
                                      double thresh) {

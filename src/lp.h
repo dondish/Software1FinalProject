@@ -80,11 +80,11 @@ lp_status_t lp_solve_ilp(lp_env_t env, board_t* board);
 
 /**
  * Attempt to generate a puzzle in `board` by filling `add` empty cells with
- * random legal values, using the ILP solver to solve it, and clearing `remove`
+ * random legal values, using the ILP solver to solve it, and leave `leave`
  * cells. If, after 1000 attempts, the process fails, `GEN_MAX_ATTEMTPS` is
  * returned.
  */
-lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int remove);
+lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int leave);
 
 /**
  * Deallocate any memory held by the specified candidate list.
@@ -92,9 +92,11 @@ lp_gen_status_t lp_gen_ilp(lp_env_t env, board_t* board, int add, int remove);
 void lp_cell_candidates_destroy(lp_cell_candidates_t* candidates);
 
 /**
- * Deallocate any memory held by each candidate list in the array and then the array itself.
+ * Deallocate any memory held by each candidate list in the array and then the
+ * array itself.
  */
-void lp_cell_candidates_array_destroy(lp_cell_candidates_t* candidates, int block_size);
+void lp_cell_candidates_array_destroy(lp_cell_candidates_t* candidates,
+                                      int block_size);
 
 /**
  * Use continuous LP to search for solutions to `board`, storing scored
