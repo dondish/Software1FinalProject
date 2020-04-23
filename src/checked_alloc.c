@@ -29,7 +29,7 @@ void* checked_calloc(size_t count, size_t size) {
 
 void* checked_realloc(void* ptr, size_t new_size) {
     void* new_ptr = realloc(ptr, new_size);
-    if (!ptr) {
+    if (!new_ptr) {
         handle_alloc_error();
     }
     return new_ptr;
